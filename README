@@ -1,0 +1,42 @@
+osgPhysX
+=============
+
+The osgPhysX project focuses on the integration of OpenSceneGraph and NVIDIA PhysX. The main purpose
+is to integrate and demonstrate physics-based rigid, soft bodies, clothes, particles and vehicles in
+3D scene, all of which are well supported by the powerful PhysX engine.
+
+------------
+Installation
+------------
+
+0. Dependencies
+* OpenSceneGraph (version 3.0 or later): http://www.openscenegraph.com
+* NVIDIA PhysX (version 3.3 or later): http://developer.nvidia.com/physx-downloads
+* DirectX SDK (for DirectInput to work, which is used by the internal OIS library for buffered inputs)
+
+1. Use CMake (or cmake-gui) to build makefiles or solutions
+# cmake <recipe_dir> -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<install_dir>
+
+2. Run 'make' to build and install all recipes
+# make
+# make install
+
+3. Have fun!
+
+------------
+Examples
+------------
+
+character_controller_test:
+Move a character on complex ground and environment, which is useful in FPS games and simulations.
+Press '2' to change to first-person mode first, and press Ctrl + mouse dragging to walk.
+
+physics_vehicle_test:
+Move a 4-wheel vehicle on complex ground and environment. Also shows how to create simple physics boxes 
+and particles. Use arrow keys to move the vehicle and see how the racing engine works.
+
+------------
+Contributing
+------------
+
+Any suggestions and contributions are welcomed all the time. :-)
