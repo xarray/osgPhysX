@@ -132,7 +132,7 @@ int main(int argc, char** argv)
 
         physx::PxRigidActor* boxActor = osgPhysics::createBoxActor( extent, 10.0 );
         boxActor->setGlobalPose( physx::PxTransform(
-            osgPhysics::toPhysicsMatrix(osg::Matrix::translate(pos))) );
+            osgPhysics::toPxMatrix(osg::Matrix::translate(pos))) );
         osgPhysics::Engine::instance()->addActor( "def", boxActor );
         boxTrans->addUpdateCallback( new osgPhysics::UpdateActorCallback(boxActor) );
     }*/
@@ -176,5 +176,6 @@ int main(int argc, char** argv)
     viewer.addEventHandler(new WalkHandler(controller.get(), speed));
     viewer.setCameraManipulator(keyswitch.get());
     viewer.setSceneData(root.get());
+    viewer.setUpViewOnSingleScreen(0);
     return viewer.run();
 }

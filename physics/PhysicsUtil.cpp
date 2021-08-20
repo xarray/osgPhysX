@@ -150,7 +150,7 @@ void MemoryInputData::seek(PxU32 pos)
 namespace osgPhysics
 {
 
-    PxMat44 toPhysicsMatrix(const osg::Matrix& matrix)
+    PxMat44 toPxMatrix(const osg::Matrix& matrix)
     {
         PxReal d[16];
         for (int i = 0; i < 16; ++i) d[i] = *(matrix.ptr() + i);
@@ -469,120 +469,120 @@ namespace osgPhysics
             switch (shape->getGeometryType())
             {
             case PxGeometryType::eSPHERE:
-            {
-                PxSphereGeometry sphere;
-                shape->getSphereGeometry(sphere);
+                {
+                    PxSphereGeometry sphere;
+                    shape->getSphereGeometry(sphere);
 
-                osg::Sphere* sphereShape = new osg::Sphere(localPos, sphere.radius);
-                geode->addDrawable(new osg::ShapeDrawable(sphereShape));
-            }
-            break;
+                    osg::Sphere* sphereShape = new osg::Sphere(localPos, sphere.radius);
+                    geode->addDrawable(new osg::ShapeDrawable(sphereShape));
+                }
+                break;
             case PxGeometryType::ePLANE:
                 // TODO
                 break;
             case PxGeometryType::eCAPSULE:
-            {
-                PxCapsuleGeometry capsule;
-                shape->getCapsuleGeometry(capsule);
+                {
+                    PxCapsuleGeometry capsule;
+                    shape->getCapsuleGeometry(capsule);
 
-                osg::Capsule* capsuleShape = new osg::Capsule(
-                    localPos, capsule.radius, capsule.halfHeight * 2.0f);
-                capsuleShape->setRotation(localQuat);
-                geode->addDrawable(new osg::ShapeDrawable(capsuleShape));
-            }
-            break;
+                    osg::Capsule* capsuleShape = new osg::Capsule(
+                        localPos, capsule.radius, capsule.halfHeight * 2.0f);
+                    capsuleShape->setRotation(localQuat);
+                    geode->addDrawable(new osg::ShapeDrawable(capsuleShape));
+                }
+                break;
             case PxGeometryType::eBOX:
-            {
-                PxBoxGeometry box;
-                shape->getBoxGeometry(box);
+                {
+                    PxBoxGeometry box;
+                    shape->getBoxGeometry(box);
 
-                osg::Box* boxShape = new osg::Box(localPos,
-                    box.halfExtents[0] * 2.0f, box.halfExtents[1] * 2.0f, box.halfExtents[2] * 2.0f);
-                boxShape->setRotation(localQuat);
-                geode->addDrawable(new osg::ShapeDrawable(boxShape));
-            }
-            break;
+                    osg::Box* boxShape = new osg::Box(localPos,
+                        box.halfExtents[0] * 2.0f, box.halfExtents[1] * 2.0f, box.halfExtents[2] * 2.0f);
+                    boxShape->setRotation(localQuat);
+                    geode->addDrawable(new osg::ShapeDrawable(boxShape));
+                }
+                break;
             case PxGeometryType::eCONVEXMESH:
-            {
-                PxConvexMeshGeometry convexMeshGeom;
-                shape->getConvexMeshGeometry(convexMeshGeom);
-                // TODO: consider convexMeshGeom.scale
-
-                PxConvexMesh* convexMesh = convexMeshGeom.convexMesh;
-                if (convexMesh)
                 {
-                    /*for ( unsigned int i=0; i<convexMesh->getNbPolygons(); ++i )
-                    {
+                    PxConvexMeshGeometry convexMeshGeom;
+                    shape->getConvexMeshGeometry(convexMeshGeom);
+                    // TODO: consider convexMeshGeom.scale
 
-                    }*/
-                    // TODO
+                    PxConvexMesh* convexMesh = convexMeshGeom.convexMesh;
+                    if (convexMesh)
+                    {
+                        /*for ( unsigned int i=0; i<convexMesh->getNbPolygons(); ++i )
+                        {
+
+                        }*/
+                        // TODO
+                    }
                 }
-            }
-            break;
+                break;
             case PxGeometryType::eTRIANGLEMESH:
-            {
-                PxTriangleMeshGeometry triangleMeshGeom;
-                shape->getTriangleMeshGeometry(triangleMeshGeom);
-                // TODO: consider triangleMeshGeom.scale
-
-                PxTriangleMesh* triangleMesh = triangleMeshGeom.triangleMesh;
-                if (triangleMesh)
                 {
-                    osg::ref_ptr<osg::Vec3Array> va = new osg::Vec3Array(triangleMesh->getNbVertices());
-                    for (unsigned int i = 0; i < va->size(); ++i)
-                        (*va)[i] = toVec3(*(triangleMesh->getVertices() + i)) * localMatrix;
+                    PxTriangleMeshGeometry triangleMeshGeom;
+                    shape->getTriangleMeshGeometry(triangleMeshGeom);
+                    // TODO: consider triangleMeshGeom.scale
 
-                    osg::ref_ptr<osg::DrawElements> de;
-                    if (triangleMesh->getTriangleMeshFlags()&PxTriangleMeshFlag::e16_BIT_INDICES)
+                    PxTriangleMesh* triangleMesh = triangleMeshGeom.triangleMesh;
+                    if (triangleMesh)
                     {
-                        osg::DrawElementsUShort* de16 = new osg::DrawElementsUShort(GL_TRIANGLES);
-                        de = de16;
+                        osg::ref_ptr<osg::Vec3Array> va = new osg::Vec3Array(triangleMesh->getNbVertices());
+                        for (unsigned int i = 0; i < va->size(); ++i)
+                            (*va)[i] = toVec3(*(triangleMesh->getVertices() + i)) * localMatrix;
 
-                        const PxU16* indices = (const PxU16*)triangleMesh->getTriangles();
-                        for (unsigned int i = 0; i < triangleMesh->getNbTriangles(); ++i)
+                        osg::ref_ptr<osg::DrawElements> de;
+                        if (triangleMesh->getTriangleMeshFlags()&PxTriangleMeshFlag::e16_BIT_INDICES)
                         {
-                            de16->push_back(indices[3 * i + 0]);
-                            de16->push_back(indices[3 * i + 1]);
-                            de16->push_back(indices[3 * i + 2]);
-                        }
-                    }
-                    else
-                    {
-                        osg::DrawElementsUInt* de32 = new osg::DrawElementsUInt(GL_TRIANGLES);
-                        de = de32;
+                            osg::DrawElementsUShort* de16 = new osg::DrawElementsUShort(GL_TRIANGLES);
+                            de = de16;
 
-                        const PxU32* indices = (const PxU32*)triangleMesh->getTriangles();
-                        for (unsigned int i = 0; i < triangleMesh->getNbTriangles(); ++i)
-                        {
-                            de32->push_back(indices[3 * i + 0]);
-                            de32->push_back(indices[3 * i + 1]);
-                            de32->push_back(indices[3 * i + 2]);
+                            const PxU16* indices = (const PxU16*)triangleMesh->getTriangles();
+                            for (unsigned int i = 0; i < triangleMesh->getNbTriangles(); ++i)
+                            {
+                                de16->push_back(indices[3 * i + 0]);
+                                de16->push_back(indices[3 * i + 1]);
+                                de16->push_back(indices[3 * i + 2]);
+                            }
                         }
+                        else
+                        {
+                            osg::DrawElementsUInt* de32 = new osg::DrawElementsUInt(GL_TRIANGLES);
+                            de = de32;
+
+                            const PxU32* indices = (const PxU32*)triangleMesh->getTriangles();
+                            for (unsigned int i = 0; i < triangleMesh->getNbTriangles(); ++i)
+                            {
+                                de32->push_back(indices[3 * i + 0]);
+                                de32->push_back(indices[3 * i + 1]);
+                                de32->push_back(indices[3 * i + 2]);
+                            }
+                        }
+                        geode->addDrawable(createGeometry(va.get(), NULL, NULL, de.get()));
                     }
-                    geode->addDrawable(createGeometry(va.get(), NULL, NULL, de.get()));
                 }
-            }
-            break;
+                break;
             case PxGeometryType::eHEIGHTFIELD:
-            {
-                PxHeightFieldGeometry hfGeom;
-                shape->getHeightFieldGeometry(hfGeom);
-                // TODO: consider hfGeom.*scale
-
-                PxHeightField* heightField = hfGeom.heightField;
-                if (heightField)
                 {
-                    // TODO
+                    PxHeightFieldGeometry hfGeom;
+                    shape->getHeightFieldGeometry(hfGeom);
+                    // TODO: consider hfGeom.*scale
+
+                    PxHeightField* heightField = hfGeom.heightField;
+                    if (heightField)
+                    {
+                        // TODO
+                    }
                 }
-            }
-            break;
+                break;
             }
         }
         return transform.release();
     }
 
     osg::Geometry* createGeometry(osg::Vec3Array* va, osg::Vec3Array* na, osg::Vec2Array* ta,
-        osg::PrimitiveSet* p, bool useVBO)
+                                  osg::PrimitiveSet* p, bool useVBO)
     {
         if (!va || !p)
         {

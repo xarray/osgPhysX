@@ -22,7 +22,7 @@ namespace osgPhysics
     }
 
     /** Convert OpenSceneGraph matrix to Physics matrix */
-    extern physx::PxMat44 toPhysicsMatrix(const osg::Matrix& matrix);
+    extern physx::PxMat44 toPxMatrix(const osg::Matrix& matrix);
 
     /** Convert Physics matrix to OpenSceneGraph matrix */
     extern osg::Matrix toMatrix(const physx::PxMat44& pmatrix);

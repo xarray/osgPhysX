@@ -79,7 +79,7 @@ public:
             else _vehicle->steerLeft(false);
 
             if (_inputManager->isKeyDown('r'))
-                _vehicle->resetPose(physx::PxTransform(osgPhysics::toPhysicsMatrix(_initMatrix)));
+                _vehicle->resetPose(physx::PxTransform(osgPhysics::toPxMatrix(_initMatrix)));
         }
     }
 
@@ -171,7 +171,7 @@ osg::Group* createCar(osgPhysicsUtils::InputManager* manager, osgPhysics::Update
     vehicle->create(motorData, chassisData, wheelData, NULL, NULL, true);
     osgPhysics::Engine::instance()->addActor("def", vehicle->getActor());
     physicsUpdater->addVehicle(vehicle.get());
-    vehicle->resetPose(physx::PxTransform(osgPhysics::toPhysicsMatrix(pose)));
+    vehicle->resetPose(physx::PxTransform(osgPhysics::toPxMatrix(pose)));
 
     // Connect scene and physics object
     osg::ref_ptr<UpdateVehicleEventsCallback> updater = new UpdateVehicleEventsCallback(manager, vehicle.get(), pose);
@@ -278,7 +278,7 @@ int main(int argc, char** argv)
     physx::PxRigidActor* ballActor = (physx::PxRigidActor*)osgPhysics::createConvexMeshActor(
         osgPhysics::createConvexMesh(*ball, physx::PxConvexFlag::eCOMPUTE_CONVEX), 1.0f);
     ballActor->setGlobalPose(physx::PxTransform(
-        osgPhysics::toPhysicsMatrix(osg::Matrix::translate(initialPosition + osg::Z_AXIS * 80.0f))));
+        osgPhysics::toPxMatrix(osg::Matrix::translate(initialPosition + osg::Z_AXIS * 80.0f))));
     ball->addUpdateCallback(new osgPhysics::UpdateActorCallback(ballActor));
 
     surface = osgPhysics::VehicleManager::SURFACE_TARMAC;

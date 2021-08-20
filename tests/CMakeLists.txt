@@ -8,6 +8,12 @@ IF(WIN32)
     SET(THIRD_PARTY_LIBRARIES ${THIRD_PARTY_LIBRARIES} ws2_32 dinput8 dxguid)
 ENDIF(WIN32)
 
+# Basic rigid bodies
+SET(EXECUTABLE_NAME hello_physics_world)
+SET(EXECUTABLE_FILES hello_physics_world_test.cpp)
+SET(EXTERNAL_LIBRARIES osgPhysics osgPhysicsUtils ${THIRD_PARTY_LIBRARIES})
+START_EXECUTABLE()
+
 # Character control
 SET(EXECUTABLE_NAME character_controller)
 SET(EXECUTABLE_FILES character_controller_test.cpp)
