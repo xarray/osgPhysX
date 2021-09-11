@@ -70,6 +70,9 @@ namespace osgPhysics
     /** Create a physics actor (static if density is 0) */
     extern physx::PxRigidActor* createActor(const physx::PxGeometry& geom, double density, physx::PxMaterial* mtl = 0);
 
+    /** Create a physics actor with a materials list */
+    extern physx::PxRigidActor* createActor(const physx::PxGeometry& geom, const std::vector<physx::PxMaterial*>& mtlList);
+
     /** Create a physics box actor */
     extern physx::PxRigidActor* createBoxActor(const osg::Vec3& dim, double density, physx::PxMaterial* mtl = 0);
 
@@ -84,7 +87,9 @@ namespace osgPhysics
 
     /** Create a physics height field actor */
     extern physx::PxRigidActor* createHeightFieldActor(
-        physx::PxHeightField* hf, float xScale, float yScale, double density, physx::PxMaterial* mtl = 0);
+        physx::PxHeightField* hf, float xScale, float yScale, float zScale, physx::PxMaterial* mtl = 0);
+    extern physx::PxRigidActor* createHeightFieldActor(
+        physx::PxHeightField* hf, float xScale, float yScale, float zScale, const std::vector<physx::PxMaterial*>& mtlList);
 
     /** Create a static triangle mesh actor */
     extern physx::PxRigidActor* createTriangleMeshActor(physx::PxTriangleMesh* mesh, physx::PxMaterial* mtl = 0);

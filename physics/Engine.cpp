@@ -15,8 +15,10 @@ public:
             << message << std::endl;
     }
 };
+
 ErrorCallback errorHandler;
 PxDefaultAllocator defaultAllocator;
+bool Engine::startWithPVD = false;
 
 Engine* Engine::instance()
 {
@@ -25,7 +27,7 @@ Engine* Engine::instance()
 }
 
 Engine::Engine()
-    : _cooking(NULL), _cudaManager(NULL)
+    : _cooking(NULL), _cudaManager(NULL), _pvdTransport(NULL), _pvd(NULL)
 {
     PxFoundation* foundation = PxCreateFoundation(PX_FOUNDATION_VERSION, defaultAllocator, errorHandler);
     if (!foundation)
@@ -34,7 +36,20 @@ Engine::Engine()
         return;
     }
 
-    _physicsSDK = PxCreatePhysics(PX_PHYSICS_VERSION, *foundation, PxTolerancesScale());
+    if (startWithPVD)
+    {
+#if _DEBUG
+        _pvd = PxCreatePvd(*foundation);
+        _pvdTransport = PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 10);
+        _pvd->connect(*_pvdTransport, PxPvdInstrumentationFlag::eALL);
+        OSG_NOTICE << "Initializing PVD support." << std::endl;
+#else
+        OSG_WARN << "PVD only works with debug, checked and profiling configurations." << std::endl;
+#endif
+    }
+
+    _physicsSDK = PxCreatePhysics(PX_PHYSICS_VERSION, *foundation, PxTolerancesScale(),
+                                  (_pvd != NULL), _pvd);
     if (!_physicsSDK)
     {
         OSG_WARN << "Unable to initialize PhysX SDK." << std::endl;
@@ -46,18 +61,6 @@ Engine::Engine()
     {
         OSG_WARN << "Unable to initialize PhysX extensions." << std::endl;
     }
-
-#ifdef _DEBUG
-    if (_physicsSDK->getPvdConnectionManager())
-    {
-        PxVisualDebuggerExt::createConnection(
-            _physicsSDK->getPvdConnectionManager(), "localhost", 5425, 10000);
-    }
-    else
-    {
-        OSG_WARN << "Unable to start the PhysX visual debugger." << std::endl;
-    }
-#endif
 }
 
 Engine::~Engine()
@@ -66,6 +69,8 @@ Engine::~Engine()
     PxCloseExtensions();
     _defaultMaterial->release();
     _physicsSDK->release();
+    if (_pvd) _pvd->release();
+    if (_pvdTransport) _pvdTransport->release();
     if (_cooking) _cooking->release();
     if (_cudaManager) _cudaManager->release();
 }

@@ -21,6 +21,7 @@ namespace osgPhysics
     {
     public:
         static Engine* instance();
+        static bool startWithPVD;
 
         physx::PxPhysics* getPhysicsSDK() { return _physicsSDK; }
         const physx::PxPhysics* getPhysicsSDK() const { return _physicsSDK; }
@@ -75,6 +76,8 @@ namespace osgPhysics
         physx::PxMaterial* _defaultMaterial;
         physx::PxCooking* _cooking;
         physx::PxCudaContextManager* _cudaManager;
+        physx::PxPvdTransport* _pvdTransport;
+        physx::PxPvd* _pvd;
     };
 
 }

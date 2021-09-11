@@ -226,9 +226,10 @@ namespace osgPhysics
         heightFieldDesc.format = PxHeightFieldFormat::eS16_TM;
         heightFieldDesc.thickness = thickness;
 
-        PxU32* samplesData = (PxU32*)malloc(sizeof(PxU32) * numColumns * numRows);
+        PxHeightFieldSample* samplesData = (PxHeightFieldSample*)malloc(
+            sizeof(PxHeightFieldSample) * numColumns * numRows);
         heightFieldDesc.samples.data = samplesData;
-        heightFieldDesc.samples.stride = sizeof(PxU32);
+        heightFieldDesc.samples.stride = sizeof(PxHeightFieldSample);
 
         PxU8* ptr = (PxU8*)heightFieldDesc.samples.data;
         for (PxU32 row = 0; row < numRows; ++row)
@@ -237,7 +238,7 @@ namespace osgPhysics
             {
                 unsigned int index = row * numColumns + col;
                 PxHeightFieldSample* sample = (PxHeightFieldSample*)ptr;
-                sample->height = *(heightData + index);
+                sample->height = (physx::PxI16)*(heightData + index);
                 sample->materialIndex0 = lowerTriangleData ? *(lowerTriangleData + index) : 0;
                 sample->materialIndex1 = upperTriangleData ? *(upperTriangleData + index) : 0;
                 ptr += heightFieldDesc.samples.stride;
@@ -385,6 +386,19 @@ namespace osgPhysics
         }
     }
 
+    PxRigidActor* createActor(const PxGeometry& geom, const std::vector<PxMaterial*>& mtlList)
+    {
+        PxShape* shape = NULL;
+        if (mtlList.empty())
+            shape = SDK_OBJ->createShape(geom, *DEF_MTL, true);
+        else
+            shape = SDK_OBJ->createShape(geom, &mtlList[0], mtlList.size(), true);
+
+        PxRigidStatic* actor = SDK_OBJ->createRigidStatic(PxTransform(PxIdentity));
+        actor->attachShape(*shape); shape->release();
+        return actor;
+    }
+
     PxRigidActor* createBoxActor(const osg::Vec3& dim, double density, PxMaterial* mtl)
     {
         PxBoxGeometry geometry(PxVec3(dim[0] * 0.5f, dim[1] * 0.5f, dim[2] * 0.5f));
@@ -409,13 +423,34 @@ namespace osgPhysics
         return createActor(geometry, density, mtl);
     }
 
-    PxRigidActor* createHeightFieldActor(PxHeightField* hf, float xScale, float yScale, double density, PxMaterial* mtl)
+    PxRigidActor* createHeightFieldActor(PxHeightField* hf, float xScale, float yScale,
+                                         float zScale, PxMaterial* mtl)
     {
         PxHeightFieldGeometry geometry;
         geometry.heightField = hf;
         geometry.rowScale = xScale;
         geometry.columnScale = yScale;
-        return createActor(geometry, density, mtl);
+        geometry.heightScale = zScale;
+        PxRigidStatic* actor = PxCreateStatic(
+            *SDK_OBJ, PxTransform(PxQuat(osg::PI_2, PxVec3(1.0f, 0.0f, 0.0f))), geometry,
+            mtl ? *mtl : *DEF_MTL);
+        return actor;
+    }
+
+    PxRigidActor* createHeightFieldActor(PxHeightField* hf, float xScale, float yScale, float zScale,
+                                         const std::vector<PxMaterial*>& mtlList)
+    {
+        PxHeightFieldGeometry geometry;
+        geometry.heightField = hf;
+        geometry.rowScale = xScale;
+        geometry.columnScale = yScale;
+        geometry.heightScale = zScale;
+
+        PxShape* shape = SDK_OBJ->createShape(geometry, &mtlList[0], mtlList.size(), true);
+        PxRigidStatic* actor = SDK_OBJ->createRigidStatic(
+            PxTransform(PxQuat(osg::PI_2, PxVec3(1.0f, 0.0f, 0.0f))));
+        actor->attachShape(*shape); shape->release();
+        return actor;
     }
 
     PxRigidActor* createTriangleMeshActor(PxTriangleMesh* mesh, PxMaterial* mtl)
@@ -567,12 +602,28 @@ namespace osgPhysics
                 {
                     PxHeightFieldGeometry hfGeom;
                     shape->getHeightFieldGeometry(hfGeom);
-                    // TODO: consider hfGeom.*scale
 
-                    PxHeightField* heightField = hfGeom.heightField;
-                    if (heightField)
+                    PxHeightField* hf = hfGeom.heightField;
+                    if (hf)
                     {
-                        // TODO
+                        osg::HeightField* grid = new osg::HeightField;
+                        grid->allocate(hf->getNbColumns(), hf->getNbRows());
+                        grid->setOrigin(osg::Vec3(0.0f, 0.0f, 0.0f));
+                        grid->setXInterval(hfGeom.columnScale);
+                        grid->setYInterval(hfGeom.rowScale);
+
+                        float zScale = hfGeom.heightScale;
+                        for (unsigned int r = 0; r < hf->getNbRows(); ++r)
+                            for (unsigned int c = 0; c < hf->getNbColumns(); ++c)
+                            {
+                                const PxHeightFieldSample& s = hf->getSample(r, c);
+                                grid->setHeight(c, r, (float)s.height * zScale);
+                            }
+                        
+                        geode->addDrawable(new osg::ShapeDrawable(grid));
+                        transform->setMatrix(osg::Matrix::rotate(-osg::PI_2, osg::Y_AXIS)
+                                           * osg::Matrix::rotate(-osg::PI_2, osg::Z_AXIS)
+                                           * transform->getMatrix());
                     }
                 }
                 break;

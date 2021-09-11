@@ -14,6 +14,12 @@ SET(EXECUTABLE_FILES hello_physics_world_test.cpp)
 SET(EXTERNAL_LIBRARIES osgPhysics osgPhysicsUtils ${THIRD_PARTY_LIBRARIES})
 START_EXECUTABLE()
 
+# Height field with materials
+SET(EXECUTABLE_NAME physics_heightfield)
+SET(EXECUTABLE_FILES physics_heightfield_test.cpp)
+SET(EXTERNAL_LIBRARIES osgPhysics osgPhysicsUtils ${THIRD_PARTY_LIBRARIES})
+START_EXECUTABLE()
+
 # Character control
 SET(EXECUTABLE_NAME character_controller)
 SET(EXECUTABLE_FILES character_controller_test.cpp)
