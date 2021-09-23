@@ -345,8 +345,8 @@ void NativeParticleEmitter::emitParticles(double dt)
                 continue;
             }
 
-            newParticles.positions.push_back(toPhysicsVec3(P->getPosition() * psToWorld));
-            newParticles.velocities.push_back(toPhysicsVec3(
+            newParticles.positions.push_back(toPxVec3(P->getPosition() * psToWorld));
+            newParticles.velocities.push_back(toPxVec3(
                 osg::Matrix::transform3x3(P->getVelocity(), psToWorld)));
             newParticles.indices.push_back(index);
             _updater->setParticleObject(index, this);  // FIXME: only to make the index increase

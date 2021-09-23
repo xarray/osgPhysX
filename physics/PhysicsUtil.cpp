@@ -432,7 +432,7 @@ namespace osgPhysics
         geometry.columnScale = yScale;
         geometry.heightScale = zScale;
         PxRigidStatic* actor = PxCreateStatic(
-            *SDK_OBJ, PxTransform(PxQuat(osg::PI_2, PxVec3(1.0f, 0.0f, 0.0f))), geometry,
+            *SDK_OBJ, PxTransform(PxQuat((float)osg::PI_2, PxVec3(1.0f, 0.0f, 0.0f))), geometry,
             mtl ? *mtl : *DEF_MTL);
         return actor;
     }
@@ -448,7 +448,7 @@ namespace osgPhysics
 
         PxShape* shape = SDK_OBJ->createShape(geometry, &mtlList[0], mtlList.size(), true);
         PxRigidStatic* actor = SDK_OBJ->createRigidStatic(
-            PxTransform(PxQuat(osg::PI_2, PxVec3(1.0f, 0.0f, 0.0f))));
+            PxTransform(PxQuat((float)osg::PI_2, PxVec3(1.0f, 0.0f, 0.0f))));
         actor->attachShape(*shape); shape->release();
         return actor;
     }

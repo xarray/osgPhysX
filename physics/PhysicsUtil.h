@@ -11,15 +11,10 @@
 namespace osgPhysics
 {
 
-    inline physx::PxVec3 toPhysicsVec3(const osg::Vec3& v)
-    {
-        return physx::PxVec3(v[0], v[1], v[2]);
-    }
-
-    inline osg::Vec3 toVec3(const physx::PxVec3& v)
-    {
-        return osg::Vec3(v[0], v[1], v[2]);
-    }
+    inline physx::PxVec3 toPxVec3(const osg::Vec3& v) { return physx::PxVec3(v[0], v[1], v[2]); }
+    inline physx::PxExtendedVec3 toPxVec3d(const osg::Vec3d& v) { return physx::PxExtendedVec3(v[0], v[1], v[2]); }
+    inline osg::Vec3 toVec3(const physx::PxVec3& v) { return osg::Vec3(v[0], v[1], v[2]); }
+    inline osg::Vec3d toVec3d(const physx::PxExtendedVec3& v) { return osg::Vec3d(v[0], v[1], v[2]); }
 
     /** Convert OpenSceneGraph matrix to Physics matrix */
     extern physx::PxMat44 toPxMatrix(const osg::Matrix& matrix);

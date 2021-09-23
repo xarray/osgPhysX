@@ -319,12 +319,12 @@ int main(int argc, char** argv)
     viewer.setSceneData(root.get());
     viewer.setUpViewOnSingleScreen(0);
 
-    int x = 0, y = 0, w = 1920, h = 1080;
     osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(
         viewer.getCamera()->getGraphicsContext());
     if (gw)
     {
         // Send window size event for scene objects to initialize
+        int x = 0, y = 0, w = 1920, h = 1080;
         gw->getWindowRectangle(x, y, w, h);
         viewer.getEventQueue()->windowResize(x, y, w, h);
 

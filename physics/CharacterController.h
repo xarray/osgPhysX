@@ -14,11 +14,16 @@ namespace osgPhysics
     public:
         static CharacterControlManager* instance();
         physx::PxControllerManager* getOrCreateManager(physx::PxScene* scene);
+        physx::PxObstacleContext* getOrCreateObstacle(physx::PxScene* scene);
+
+        physx::PxObstacleContext* getObstacle(physx::PxScene* scene);
+        void removeObstacle(physx::PxScene* scene);
 
     protected:
         CharacterControlManager();
         virtual ~CharacterControlManager();
         std::map<physx::PxScene*, physx::PxControllerManager*> _managers;
+        std::map<physx::PxScene*, physx::PxObstacleContext*> _obstacleContexts;
     };
 
     /** The character controller */
@@ -31,7 +36,9 @@ namespace osgPhysics
             physx::PxExtendedVec3 position;  // the initial position
             physx::PxVec3 up;  // the up direction
             physx::PxF32 density;  // density of the character
-            physx::PxF32 maxSlopeAngle;  // max slope angle we can reach (or 0 for any)
+            physx::PxF32 maxSlopeAngle;  // max slope angle we can reach
+            physx::PxF32 maxJumpHeight;
+            physx::PxF32 invisibleWallHeight;
             physx::PxF32 stepOffset;  // max height of an obstacle which we can climb
             physx::PxF32 contactOffset;  // a skin around the object for creating contacts
             physx::PxF32 scaleCoeffcient;  // scale coeffcient for underlying kinematic actor
@@ -70,7 +77,11 @@ namespace osgPhysics
         void move(const osg::Vec3& offset, float gravityScale = 1.0f);
 
         /** Update the controller movement every frame */
-        void updateMovement(double step);
+        physx::PxControllerCollisionFlags updateMovement(double step);
+
+        /** Add/update an invisible obstacle. Set handle to 0 if you want to add new */
+        void updateObstacle(physx::ObstacleHandle handle, const physx::PxObstacle& obstacle);
+        void removeObstacle(physx::ObstacleHandle handle, bool removeAll);
 
         // Implements PxUserControllerHitReport
         virtual void onShapeHit(const physx::PxControllerShapeHit& hit);
@@ -93,6 +104,7 @@ namespace osgPhysics
         void addForceAtLocalPos(physx::PxRigidBody& body, const physx::PxVec3& force, const physx::PxVec3& pos,
             physx::PxForceMode::Enum mode, bool wakeup = true);
 
+        physx::PxScene* _controllerScene;
         physx::PxRigidDynamic* _actor;
         physx::PxController* _controller;
         osg::Vec3 _offset, _gravity;

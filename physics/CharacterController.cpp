@@ -24,11 +24,10 @@ CharacterControlManager::CharacterControlManager()
 
 CharacterControlManager::~CharacterControlManager()
 {
+    for (std::map<physx::PxScene*, physx::PxObstacleContext*>::iterator itr = _obstacleContexts.begin();
+        itr != _obstacleContexts.end(); ++itr) itr->second->release();
     for (std::map<physx::PxScene*, physx::PxControllerManager*>::iterator itr = _managers.begin();
-        itr != _managers.end(); ++itr)
-    {
-        itr->second->release();
-    }
+        itr != _managers.end(); ++itr) itr->second->release();
 }
 
 physx::PxControllerManager* CharacterControlManager::getOrCreateManager(physx::PxScene* scene)
@@ -42,6 +41,30 @@ physx::PxControllerManager* CharacterControlManager::getOrCreateManager(physx::P
     return manager;
 }
 
+physx::PxObstacleContext* CharacterControlManager::getOrCreateObstacle(physx::PxScene* scene)
+{
+    physx::PxObstacleContext* context = _obstacleContexts[scene];
+    if (!context)
+    {
+        physx::PxControllerManager* manager = getOrCreateManager(scene);
+        context = manager->createObstacleContext();
+        _obstacleContexts[scene] = context;
+    }
+    return context;
+}
+
+physx::PxObstacleContext* CharacterControlManager::getObstacle(physx::PxScene* scene)
+{
+    std::map<physx::PxScene*, physx::PxObstacleContext*>::iterator itr = _obstacleContexts.find(scene);
+    if (itr != _obstacleContexts.end()) return itr->second; else return NULL;
+}
+
+void CharacterControlManager::removeObstacle(physx::PxScene* scene)
+{
+    std::map<physx::PxScene*, physx::PxObstacleContext*>::iterator itr = _obstacleContexts.find(scene);
+    if (itr != _obstacleContexts.end()) { itr->second->release(); _obstacleContexts.erase(itr); }
+}
+
 /* CharacterController */
 
 CharacterController::ControllerData::ControllerData(float d, const osg::Vec3& p, const osg::Vec3& u)
@@ -49,14 +72,16 @@ CharacterController::ControllerData::ControllerData(float d, const osg::Vec3& p,
     position = PxExtendedVec3(p[0], p[1], p[2]);
     up = PxVec3(u[0], u[1], u[2]);
     density = d;
-    maxSlopeAngle = 0.0f;
+    maxSlopeAngle = (float)osg::PI_4;
+    maxJumpHeight = 0.0f;
+    invisibleWallHeight = 0.0f;
     stepOffset = 0.05f;
     contactOffset = 0.01f;
     scaleCoeffcient = 0.8f;
 }
 
 CharacterController::CharacterController()
-    : _actor(NULL), _controller(NULL)
+    : _controllerScene(NULL), _actor(NULL), _controller(NULL)
 {
 }
 
@@ -89,12 +114,14 @@ bool CharacterController::create(const std::string& s, PxControllerDesc* descrip
     const ControllerData& data, PxMaterial* mtl)
 {
     PxScene* scene = Engine::instance()->getScene(s);
-    if (!scene || !description) return false;
+    if (!scene || !description) return false; else _controllerScene = scene;
 
     description->position = data.position;
     description->upDirection = data.up;
     description->density = data.density;
-    description->slopeLimit = data.maxSlopeAngle;
+    description->slopeLimit = cosf(data.maxSlopeAngle);
+    description->maxJumpHeight = data.maxJumpHeight;
+    description->invisibleWallHeight = data.invisibleWallHeight;
     description->contactOffset = data.contactOffset;
     description->stepOffset = data.stepOffset;
     description->scaleCoeff = data.scaleCoeffcient;
@@ -121,11 +148,34 @@ void CharacterController::move(const osg::Vec3& offset, float gravityScale)
     _offset = offset + _gravity * gravityScale;
 }
 
-void CharacterController::updateMovement(double step)
+physx::PxControllerCollisionFlags CharacterController::updateMovement(double step)
 {
     PxVec3 offset(_offset[0], _offset[1], _offset[2]);
     const static float minOffsetDistance = 0.001f;
-    const PxU32 flags = _controller->move(offset, minOffsetDistance, step, PxControllerFilters(), NULL);
+    physx::PxObstacleContext* obManager =
+        CharacterControlManager::instance()->getObstacle(_controllerScene);
+    return _controller->move(offset, minOffsetDistance, step, PxControllerFilters(), obManager);
+}
+
+void CharacterController::updateObstacle(physx::ObstacleHandle handle, const physx::PxObstacle& obstacle)
+{
+    if (!_controllerScene) return;
+    physx::PxObstacleContext* obManager =
+        CharacterControlManager::instance()->getOrCreateObstacle(_controllerScene);
+
+    if (handle == 0) obManager->addObstacle(obstacle);
+    else obManager->updateObstacle(handle, obstacle);
+}
+
+void CharacterController::removeObstacle(physx::ObstacleHandle handle, bool removeAll)
+{
+    if (!_controllerScene) return;
+    physx::PxObstacleContext* obManager =
+        CharacterControlManager::instance()->getObstacle(_controllerScene);
+
+    if (!obManager) return;
+    else if (handle != 0) obManager->removeObstacle(handle);
+    else if (removeAll) CharacterControlManager::instance()->removeObstacle(_controllerScene);
 }
 
 void CharacterController::onShapeHit(const PxControllerShapeHit& hit)
