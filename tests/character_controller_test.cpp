@@ -84,15 +84,6 @@ int main(int argc, char** argv)
     osg::ref_ptr<osg::MatrixTransform> terrain = new osg::MatrixTransform;
     terrain->addChild(osgDB::readNodeFile("lz.osg"));
 
-    // Add the ground
-    osg::ComputeBoundsVisitor cbv;
-    terrain->accept(cbv);
-
-    osg::BoundingBox bb = cbv.getBoundingBox();
-    float w = 2.0f * (bb.xMax() - bb.xMin()), h = 2.0f * (bb.yMax() - bb.yMin());
-    terrain->addChild(osgPhysicsUtils::createQuad(
-        osg::Vec3(bb.center().x() - w * 0.5f, bb.center().y() - h * 0.5f, bb.zMin()), w, h));
-
     // The scene and scene updater
     osgPhysics::Engine::instance()->addScene(
         "def", osgPhysics::createScene(osg::Vec3(0.0f, 0.0f, -9.8f)));
@@ -116,13 +107,13 @@ int main(int argc, char** argv)
     controller->createCapsule("def", radius, height, true, controllerData);
     
     physx::PxBoxObstacle airWalls[4];
-    airWalls[0].mPos = osgPhysics::toPxVec3d(osg::Vec3d(0.0, -100.0, 0.0));
+    airWalls[0].mPos = osgPhysics::toPxVec3d(osg::Vec3d(0.0, -100.0, 50.0));
     airWalls[0].mHalfExtents = osgPhysics::toPxVec3(osg::Vec3(100.0f, 0.1f, 100.0f));
-    airWalls[1].mPos = osgPhysics::toPxVec3d(osg::Vec3d(0.0, 100.0, 0.0));
+    airWalls[1].mPos = osgPhysics::toPxVec3d(osg::Vec3d(0.0, 100.0, 50.0));
     airWalls[1].mHalfExtents = osgPhysics::toPxVec3(osg::Vec3(100.0f, 0.1f, 100.0f));
-    airWalls[2].mPos = osgPhysics::toPxVec3d(osg::Vec3d(-100.0, 0.0, 0.0));
+    airWalls[2].mPos = osgPhysics::toPxVec3d(osg::Vec3d(-100.0, 0.0, 50.0));
     airWalls[2].mHalfExtents = osgPhysics::toPxVec3(osg::Vec3(0.1f, 100.0f, 100.0f));
-    airWalls[3].mPos = osgPhysics::toPxVec3d(osg::Vec3d(100.0, 0.0, 0.0));
+    airWalls[3].mPos = osgPhysics::toPxVec3d(osg::Vec3d(100.0, 0.0, 50.0));
     airWalls[3].mHalfExtents = osgPhysics::toPxVec3(osg::Vec3(0.1f, 100.0f, 100.0f));
     for (int i = 0; i < 4; ++i) controller->updateObstacle(0/*new obstacle*/, airWalls[i]);
 

@@ -1,24 +1,27 @@
 /*
 The zlib/libpng License
 
-Copyright (c) 2005-2007 Phillip Castaneda (pjcast -- www.wreckedgames.com)
+Copyright (c) 2018 Arthur Brainville
+Copyright (c) 2015 Andrew Fenn
+Copyright (c) 2005-2010 Phillip Castaneda (pjcast -- www.wreckedgames.com)
 
-This software is provided 'as-is', without any express or implied warranty. In no event will
-the authors be held liable for any damages arising from the use of this software.
+This software is provided 'as-is', without any express or implied warranty. In no
+event will the authors be held liable for any damages arising from the use of this
+software.
 
-Permission is granted to anyone to use this software for any purpose, including commercial
-applications, and to alter it and redistribute it freely, subject to the following
-restrictions:
+Permission is granted to anyone to use this software for any purpose, including
+commercial applications, and to alter it and redistribute it freely, subject to the
+following restrictions:
 
     1. The origin of this software must not be misrepresented; you must not claim that
-		you wrote the original software. If you use this software in a product,
-		an acknowledgment in the product documentation would be appreciated but is
-		not required.
+        you wrote the original software. If you use this software in a product,
+        an acknowledgment in the product documentation would be appreciated
+        but is not required.
 
     2. Altered source versions must be plainly marked as such, and must not be
-		misrepresented as being the original software.
+        misrepresented as being the original software.
 
-    3. This notice may not be removed or altered from any source distribution.
+    3. This notice may not be removed or altered from any source distribution.   
 */
 #ifndef OIS_Prereqs_H
 #define OIS_Prereqs_H
@@ -87,8 +90,6 @@ restrictions:
 #   endif
 #   undef _OISExport
 #   define _OISExport __attribute__((visibility("default")))
-#elif defined( ANDROID )
-#	define OIS_ANDROID_PLATFORM
 #else //Probably Linux
 #	define OIS_LINUX_PLATFORM
 #	include <unistd.h>
@@ -101,11 +102,31 @@ restrictions:
 #	define OIS_ARCH_32
 #endif
 
+//-------------- Various helper preprocessor definitions ---------------------//
+
+#ifdef OIS_MSVC_COMPILER
+#	define OIS_INLINE_PRAGMA(x) __pragma(x) // x is intentionally not wrapped; __pragma rejects expressions beginning with '('.
+#else
+#	define OIS_INLINE_PRAGMA(x)
+#endif
+
+#define OIS_MACRO_BEGIN do {
+
+#define OIS_MACRO_END \
+	} OIS_INLINE_PRAGMA(warning(push)) OIS_INLINE_PRAGMA(warning(disable:4127)) while (0) OIS_INLINE_PRAGMA(warning(pop))
+
+// This creative trickery taken from this StackOverflow answer:
+// http://stackoverflow.com/questions/4030959/will-a-variablename-c-statement-be-a-no-op-at-all-times/4030983#4030983
+#define OIS_UNUSED(x)\
+	OIS_MACRO_BEGIN\
+		((void)(true ? 0 : ((x), void(), 0)));\
+	OIS_MACRO_END
+
 //-------------- Common Classes, Enums, and Typdef's -------------------------//
 #define OIS_VERSION_MAJOR 1
-#define OIS_VERSION_MINOR 4
-#define OIS_VERSION_PATCH 0
-#define OIS_VERSION_NAME "1.4.0"
+#define OIS_VERSION_MINOR 5
+#define OIS_VERSION_PATCH 1
+#define OIS_VERSION_NAME "1.5.1"
 
 #define OIS_VERSION ((OIS_VERSION_MAJOR << 16) | (OIS_VERSION_MINOR << 8) | OIS_VERSION_PATCH)
 
@@ -118,10 +139,10 @@ namespace OIS
 	class Keyboard;
 	class Mouse;
 	class JoyStick;
-    class MultiTouch;
+	class MultiTouch;
 	class KeyListener;
 	class MouseListener;
-    class MultiTouchListener;
+	class MultiTouchListener;
 	class JoyStickListener;
 	class Interface;
 	class ForceFeedback;
@@ -138,7 +159,7 @@ namespace OIS
 	typedef std::map<Object*, FactoryCreator*> FactoryCreatedObject;
 
 	//! Each Input class has a General Type variable, a form of RTTI
-    enum Type
+	enum Type
 	{
 		OISUnknown       = 0,
 		OISKeyboard      = 1,
@@ -154,7 +175,7 @@ namespace OIS
 	//--------     Shared common components    ------------------------//
 
 	//! Base type for all device components (button, axis, etc)
-    enum ComponentType
+	enum ComponentType
 	{
 		OIS_Unknown = 0,
 		OIS_Button  = 1, //ie. Key, mouse button, joy button, etc
@@ -169,7 +190,7 @@ namespace OIS
 	{
 	public:
 		Component() : cType(OIS_Unknown) {};
-		Component(ComponentType type) : cType(type) {};
+		explicit Component(ComponentType type) : cType(type) {};
 		//! Indicates what type of coponent this is
 		ComponentType cType;
 	};
@@ -179,7 +200,7 @@ namespace OIS
 	{
 	public:
 		Button() : Component(OIS_Button), pushed(false) {}
-		Button(bool bPushed) : Component(OIS_Button), pushed(bPushed) {}
+		explicit Button(bool bPushed) : Component(OIS_Button), pushed(bPushed) {}
 		//! true if pushed, false otherwise
 		bool pushed;
 	};
@@ -209,10 +230,10 @@ namespace OIS
 	public:
 		Vector3() {}
 		Vector3(float _x, float _y, float _z) : Component(OIS_Vector3), x(_x), y(_y), z(_z) {};
-		
+
 		//! X component of vector
 		float x;
-		
+
 		//! Y component of vector
 		float y;
 

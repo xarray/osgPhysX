@@ -1,35 +1,42 @@
 /*
 The zlib/libpng License
 
-Copyright (c) 2005-2007 Phillip Castaneda (pjcast -- www.wreckedgames.com)
+Copyright (c) 2018 Arthur Brainville
+Copyright (c) 2015 Andrew Fenn
+Copyright (c) 2005-2010 Phillip Castaneda (pjcast -- www.wreckedgames.com)
 
-This software is provided 'as-is', without any express or implied warranty. In no event will
-the authors be held liable for any damages arising from the use of this software.
+This software is provided 'as-is', without any express or implied warranty. In no
+event will the authors be held liable for any damages arising from the use of this
+software.
 
-Permission is granted to anyone to use this software for any purpose, including commercial
-applications, and to alter it and redistribute it freely, subject to the following
-restrictions:
+Permission is granted to anyone to use this software for any purpose, including
+commercial applications, and to alter it and redistribute it freely, subject to the
+following restrictions:
 
     1. The origin of this software must not be misrepresented; you must not claim that
-		you wrote the original software. If you use this software in a product,
-		an acknowledgment in the product documentation would be appreciated but is
-		not required.
+        you wrote the original software. If you use this software in a product,
+        an acknowledgment in the product documentation would be appreciated
+        but is not required.
 
     2. Altered source versions must be plainly marked as such, and must not be
-		misrepresented as being the original software.
+        misrepresented as being the original software.
 
-    3. This notice may not be removed or altered from any source distribution.
+    3. This notice may not be removed or altered from any source distribution.   
 */
 #ifndef _OIS_EXCEPTION_HEADER_
 #define _OIS_EXCEPTION_HEADER_
 #include "OISPrereqs.h"
 #include <exception>
 
+#ifdef OIS_WIN32_PLATFORM
+#pragma warning(push)
+#pragma warning(disable : 4275) //Silence warning from MSVC when using std::exception as the base class of a dll-interface class (OIS::Exception)
+#endif
+
 namespace OIS
 {
 	//! Simple enum's for dealing with exceptions
-    enum OIS_ERROR
-	{
+	enum OIS_ERROR {
 		E_InputDisconnected,
 		E_InputDeviceNonExistant,
 		E_InputDeviceNotSupported,
@@ -50,14 +57,15 @@ namespace OIS
 	*/
 	class _OISExport Exception : public std::exception
 	{
-		//! Hidden default
-		Exception() : eType(E_General), eLine(0), eFile(0) {}
 	public:
 		//! Creates exception object
-		Exception( OIS_ERROR err, const char* str, int line, const char *file )
-			: eType(err), eLine(line), eFile(file), eText(str) {}
+		Exception(OIS_ERROR err, const char* str, int line, const char* file) :
+		 eType(err), eLine(line), eFile(file), eText(str) { }
 
-		~Exception() throw() {}
+		Exception(const Exception& other) :
+		 eType(other.eType), eLine(other.eLine), eFile(other.eFile), eText(other.eText) { }
+
+		~Exception() throw() { }
 
 		virtual const char* what() const throw();
 
@@ -69,10 +77,25 @@ namespace OIS
 		const char* eFile;
 		//! A message passed along when the exception was raised
 		const char* eText;
+
+	private:
+		// Unimplemented and unaccessible due to const members.
+		Exception& operator=(Exception);
 	};
 }
 
 //! Use this macro to handle exceptions easily
-#define OIS_EXCEPT( err, str ) throw( OIS::Exception(err, str, __LINE__, __FILE__) )
+#define OIS_EXCEPT(err, str) throw(OIS::Exception(err, str, __LINE__, __FILE__))
+
+//TODO choose what to do with this...
+//#define OIS_WARN( err, str ) throw( OIS::Exception(err, str, __LINE__, __FILE__) )
+#define OIS_WARN(err, str) \
+	do                     \
+	{                      \
+	} while(0)
+
+#ifdef OIS_WIN32_PLATFORM
+#pragma warning(pop)
+#endif
 
 #endif //_OIS_EXCEPTION_HEADER_

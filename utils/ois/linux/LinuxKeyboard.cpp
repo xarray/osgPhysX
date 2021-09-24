@@ -1,24 +1,27 @@
 /*
 The zlib/libpng License
 
-Copyright (c) 2005-2007 Phillip Castaneda (pjcast -- www.wreckedgames.com)
+Copyright (c) 2018 Arthur Brainville
+Copyright (c) 2015 Andrew Fenn
+Copyright (c) 2005-2010 Phillip Castaneda (pjcast -- www.wreckedgames.com)
 
-This software is provided 'as-is', without any express or implied warranty. In no event will
-the authors be held liable for any damages arising from the use of this software.
+This software is provided 'as-is', without any express or implied warranty. In no
+event will the authors be held liable for any damages arising from the use of this
+software.
 
-Permission is granted to anyone to use this software for any purpose, including commercial
-applications, and to alter it and redistribute it freely, subject to the following
-restrictions:
+Permission is granted to anyone to use this software for any purpose, including
+commercial applications, and to alter it and redistribute it freely, subject to the
+following restrictions:
 
     1. The origin of this software must not be misrepresented; you must not claim that
-		you wrote the original software. If you use this software in a product,
-		an acknowledgment in the product documentation would be appreciated but is
-		not required.
+        you wrote the original software. If you use this software in a product,
+        an acknowledgment in the product documentation would be appreciated
+        but is not required.
 
     2. Altered source versions must be plainly marked as such, and must not be
-		misrepresented as being the original software.
+        misrepresented as being the original software.
 
-    3. This notice may not be removed or altered from any source distribution.
+    3. This notice may not be removed or altered from any source distribution.   
 */
 #include "linux/LinuxInputManager.h"
 #include "linux/LinuxKeyboard.h"
@@ -31,182 +34,145 @@ restrictions:
 
 using namespace OIS;
 #include <iostream>
-//-------------------------------------------------------------------//
-LinuxKeyboard::LinuxKeyboard(InputManager* creator, bool buffered, bool grab)
-	: Keyboard(creator->inputSystemName(), buffered, 0, creator)
-{
-	setlocale(LC_CTYPE, ""); //Set the locale to (hopefully) the users LANG UTF-8 Env var
 
+//-------------------------------------------------------------------//
+LinuxKeyboard::LinuxKeyboard(InputManager* creator, bool buffered, bool grab) :
+ Keyboard(creator->inputSystemName(), buffered, 0, creator), xim(0), ximStyle(0), xic(0)
+{
 	display = 0;
-	window = 0;
+	window	= 0;
 
 	grabKeyboard = grab;
 	keyFocusLost = false;
 
-	//X Key Map to KeyCode
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_1, KC_1));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_2, KC_2));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_3, KC_3));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_4, KC_4));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_5, KC_5));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_6, KC_6));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_7, KC_7));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_8, KC_8));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_9, KC_9));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_0, KC_0));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_BackSpace, KC_BACK));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_minus, KC_MINUS));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_equal, KC_EQUALS));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_space, KC_SPACE));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_comma, KC_COMMA));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_period, KC_PERIOD));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_backslash, KC_BACKSLASH));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_slash, KC_SLASH));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_bracketleft, KC_LBRACKET));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_bracketright, KC_RBRACKET));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Escape,KC_ESCAPE));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Caps_Lock, KC_CAPITAL));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Tab, KC_TAB));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Return, KC_RETURN));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Control_L, KC_LCONTROL));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Control_R, KC_RCONTROL));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_colon, KC_COLON));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_semicolon, KC_SEMICOLON));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_apostrophe, KC_APOSTROPHE));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_grave, KC_GRAVE));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_b, KC_B));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_a, KC_A));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_c, KC_C));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_d, KC_D));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_e, KC_E));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_f, KC_F));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_g, KC_G));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_h, KC_H));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_i, KC_I));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_j, KC_J));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_k, KC_K));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_l, KC_L));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_m, KC_M));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_n, KC_N));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_o, KC_O));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_p, KC_P));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_q, KC_Q));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_r, KC_R));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_s, KC_S));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_t, KC_T));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_u, KC_U));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_v, KC_V));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_w, KC_W));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_x, KC_X));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_y, KC_Y));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_z, KC_Z));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F1, KC_F1));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F2, KC_F2));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F3, KC_F3));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F4, KC_F4));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F5, KC_F5));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F6, KC_F6));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F7, KC_F7));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F8, KC_F8));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F9, KC_F9));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F10, KC_F10));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F11, KC_F11));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F12, KC_F12));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F13, KC_F13));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F14, KC_F14));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_F15, KC_F15));
-
-	//Keypad
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_0, KC_NUMPAD0));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_1, KC_NUMPAD1));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_2, KC_NUMPAD2));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_3, KC_NUMPAD3));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_4, KC_NUMPAD4));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_5, KC_NUMPAD5));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_6, KC_NUMPAD6));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_7, KC_NUMPAD7));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_8, KC_NUMPAD8));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_9, KC_NUMPAD9));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Add, KC_ADD));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Subtract, KC_SUBTRACT));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Decimal, KC_DECIMAL));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Equal, KC_NUMPADEQUALS));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Divide, KC_DIVIDE));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Multiply, KC_MULTIPLY));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Enter, KC_NUMPADENTER));
-
-	//Keypad with numlock off
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Home, KC_NUMPAD7));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Up, KC_NUMPAD8));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Page_Up, KC_NUMPAD9));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Left, KC_NUMPAD4));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Begin, KC_NUMPAD5));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Right, KC_NUMPAD6));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_End, KC_NUMPAD1));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Down, KC_NUMPAD2));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Page_Down, KC_NUMPAD3));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Insert, KC_NUMPAD0));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_KP_Delete, KC_DECIMAL));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Up, KC_UP));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Down, KC_DOWN));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Left, KC_LEFT));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Right, KC_RIGHT));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Page_Up, KC_PGUP));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Page_Down, KC_PGDOWN));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Home, KC_HOME));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_End, KC_END));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Num_Lock, KC_NUMLOCK));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Print, KC_SYSRQ));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Scroll_Lock, KC_SCROLL));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Pause, KC_PAUSE));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Shift_R, KC_RSHIFT));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Shift_L, KC_LSHIFT));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Alt_R, KC_RMENU));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Alt_L, KC_LMENU));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Insert, KC_INSERT));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Delete, KC_DELETE));
-
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Super_L, KC_LWIN));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Super_R, KC_RWIN));
-	keyConversion.insert(XtoOIS_KeyMap::value_type(XK_Menu, KC_APPS));
-
 	static_cast<LinuxInputManager*>(mCreator)->_setKeyboardUsed(true);
+
+	addKeyConversion(XK_Up, KC_UP);
+	addKeyConversion(XK_Down, KC_DOWN);
+	addKeyConversion(XK_Left, KC_LEFT);
+	addKeyConversion(XK_Right, KC_RIGHT);
+
+	addKeyConversion(XK_KP_Divide, KC_DIVIDE);
+
+	addKeyConversion(XK_KP_Home, KC_NUMPAD7);
+	addKeyConversion(XK_KP_Up, KC_NUMPAD8);
+	addKeyConversion(XK_KP_Page_Up, KC_NUMPAD9);
+	addKeyConversion(XK_KP_Left, KC_NUMPAD4);
+	addKeyConversion(XK_KP_Begin, KC_NUMPAD5);
+	addKeyConversion(XK_KP_Right, KC_NUMPAD6);
+	addKeyConversion(XK_KP_End, KC_NUMPAD1);
+	addKeyConversion(XK_KP_Down, KC_NUMPAD2);
+	addKeyConversion(XK_KP_Page_Down, KC_NUMPAD3);
+	addKeyConversion(XK_KP_Insert, KC_NUMPAD0);
+	addKeyConversion(XK_KP_Delete, KC_DECIMAL);
+
+	addKeyConversion(XK_Page_Up, KC_PGUP);
+	addKeyConversion(XK_Page_Down, KC_PGDOWN);
+	addKeyConversion(XK_Home, KC_HOME);
+	addKeyConversion(XK_End, KC_END);
+
+	addKeyConversion(XK_Print, KC_SYSRQ);
+	addKeyConversion(XK_Scroll_Lock, KC_SCROLL);
+	addKeyConversion(XK_Pause, KC_PAUSE);
+
+	addKeyConversion(XK_Shift_R, KC_RSHIFT);
+	addKeyConversion(XK_Shift_L, KC_LSHIFT);
+	addKeyConversion(XK_Alt_R, KC_RMENU);
+	addKeyConversion(XK_Alt_L, KC_LMENU);
+
+	addKeyConversion(XK_Insert, KC_INSERT);
+	addKeyConversion(XK_Delete, KC_DELETE);
+
+	addKeyConversion(XK_Super_L, KC_LWIN);
+	addKeyConversion(XK_Super_R, KC_RWIN);
+	addKeyConversion(XK_Menu, KC_APPS);
 }
 
+void LinuxKeyboard::addKeyConversion(KeySym x_key, KeyCode ois_key)
+{
+	keyConversionToOIS.insert(XtoOIS_KeyMap::value_type(x_key, ois_key));
+	keyConversionFromOIS.insert(OIStoX_KeyMap::value_type(ois_key, x_key));
+}
 //-------------------------------------------------------------------//
 void LinuxKeyboard::_initialize()
 {
+	//Set the locale to (hopefully) the users LANG UTF-8 Env var
+	if(setlocale(LC_ALL, "") == NULL)
+		OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to set default locale.");
+
 	//Clear our keyboard state buffer
-	memset( &KeyBuffer, 0, 256 );
+	memset(&KeyBuffer, 0, 256);
 	mModifiers = 0;
 
-	if( display ) XCloseDisplay(display);
+	if(display) XCloseDisplay(display);
 	display = 0;
-	window = static_cast<LinuxInputManager*>(mCreator)->_getWindow();
+	window	= static_cast<LinuxInputManager*>(mCreator)->_getWindow();
 
 	//Create our local X mListener connection
-	if( !(display = XOpenDisplay(0)) )
+	if(!(display = XOpenDisplay(0)))
 		OIS_EXCEPT(E_General, "LinuxKeyboard::_initialize >> Error opening X!");
 
-	//Set it to recieve Input events
-	if( XSelectInput(display, window, KeyPressMask | KeyReleaseMask) == BadWindow )
+	// Get modifiers masks
+	capsLockMask = XkbKeysymToModifiers(display, XK_Caps_Lock);
+	numLockMask	 = XkbKeysymToModifiers(display, XK_Num_Lock);
+
+	//Configure locale modifiers
+	if(XSetLocaleModifiers("@im=none") == NULL)
+		OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to configure locale modifiers.");
+
+	//Open input method
+	xim = XOpenIM(display, NULL, NULL, NULL);
+	if(!xim)
+	{
+		OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to open input method.");
+	}
+	else
+	{
+		XIMStyles* ximStyles;
+		char* ret = XGetIMValues(xim, XNQueryInputStyle, &ximStyles, NULL);
+		if(ret != NULL || ximStyles == NULL)
+		{
+			OIS_WARN(E_General, "LinuxKeyboard::_initialize: Input method does not support any styles.");
+		}
+		else
+		{
+			ximStyle = 0;
+			for(int i = 0; i < ximStyles->count_styles; i++)
+			{
+				if(ximStyles->supported_styles[i] == (XIMPreeditNothing | XIMStatusNothing))
+				{
+					ximStyle = ximStyles->supported_styles[i];
+					break;
+				}
+			}
+
+			if(ximStyle == 0)
+				OIS_WARN(E_General, "LinuxKeyboard::_initialize: Input method does not support the requested style.");
+
+			XFree(ximStyles);
+		}
+	}
+
+	//Set it to receive Input events
+	if(XSelectInput(display, window, KeyPressMask | KeyReleaseMask) == BadWindow)
 		OIS_EXCEPT(E_General, "LinuxKeyboard::_initialize: X error!");
 
-	if( grabKeyboard )
-		XGrabKeyboard(display,window,True,GrabModeAsync,GrabModeAsync,CurrentTime);
+	if(xim && ximStyle)
+	{
+		xic = XCreateIC(xim,
+						XNInputStyle,
+						ximStyle,
+						XNClientWindow,
+						window,
+						XNFocusWindow,
+						window,
+						NULL);
+		if(!xic)
+			OIS_WARN(E_General, "LinuxKeyboard::_initialize: Failed to create input context.");
+	}
+
+	if(grabKeyboard)
+		XGrabKeyboard(display, window, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 	keyFocusLost = false;
 }
@@ -214,11 +180,16 @@ void LinuxKeyboard::_initialize()
 //-------------------------------------------------------------------//
 LinuxKeyboard::~LinuxKeyboard()
 {
-	if( display )
+	if(display)
 	{
-		if( grabKeyboard )
+		if(grabKeyboard)
 			XUngrabKeyboard(display, CurrentTime);
 
+		if(xic)
+			XDestroyIC(xic);
+
+		if(xim)
+			XCloseIM(xim);
 		XCloseDisplay(display);
 	}
 
@@ -228,7 +199,7 @@ LinuxKeyboard::~LinuxKeyboard()
 //-------------------------------------------------------------------//
 unsigned int UTF8ToUTF32(unsigned char* buf)
 {
-	unsigned char &FirstChar = buf[0];
+	unsigned char& FirstChar = buf[0];
 
 	if(FirstChar < 128)
 		return FirstChar;
@@ -269,7 +240,7 @@ unsigned int UTF8ToUTF32(unsigned char* buf)
 }
 
 //-------------------------------------------------------------------//
-bool LinuxKeyboard::isKeyDown( KeyCode key ) const
+bool LinuxKeyboard::isKeyDown(KeyCode key) const
 {
 	return (KeyBuffer[key]);
 }
@@ -277,63 +248,31 @@ bool LinuxKeyboard::isKeyDown( KeyCode key ) const
 //-------------------------------------------------------------------//
 void LinuxKeyboard::capture()
 {
-	KeySym key;
 	XEvent event;
-	LinuxInputManager* linMan = static_cast<LinuxInputManager*>(mCreator);
 
-	while( XPending(display) > 0 )
+	while(XPending(display) > 0)
 	{
-		XNextEvent(display, &event);
+		XNextEvent(display, &event);
+
 		if(KeyPress == event.type)
 		{
-			unsigned int character = 0;
-
-			if(mTextMode != Off)
-			{
-				unsigned char buffer[6] = {0,0,0,0,0,0};
-				XLookupString(&event.xkey, (char*)buffer, 6, &key, 0);
-
-				if( mTextMode == Unicode )
-					character = UTF8ToUTF32(buffer);
-				else if( mTextMode == Ascii)
-					character = buffer[0];
-			}
-
-			//Mask out the modifier states X11 sets and read again
-			event.xkey.state &= ~ShiftMask;
-			event.xkey.state &= ~LockMask;
-			XLookupString(&event.xkey, 0, 0,&key, 0);
-
-			_injectKeyDown(key, character);
-
-			//Just printing out some debugging info.. to verify all chars are mapped
-			//std::cout << "KEY PRESSED X=" << event.xkey.keycode;
-			//std::cout << "\n KeySym=" << key << std::endl;
-
-			//Check for Alt-Tab
-			if( event.xkey.state & Mod1Mask && key == XK_Tab )
-				linMan->_setGrabState(false);
+			_handleKeyPress(event);
 		}
 		else if(KeyRelease == event.type)
 		{
-			if(!_isKeyRepeat(event))
-			{
-				//Mask out the modifier states X sets.. or we will get improper values
-				event.xkey.state &= ~ShiftMask;
-				event.xkey.state &= ~LockMask;
-
-				XLookupString(&event.xkey,NULL,0,&key,NULL);
-				_injectKeyUp(key);			}
+			_handleKeyRelease(event);
 		}
 	}
 
 	//If grabbing mode is on.. Handle focus lost/gained via Alt-Tab and mouse clicks
-	if( grabKeyboard )
+	if(grabKeyboard)
 	{
-		if( linMan->_getGrabState() == false )
+		LinuxInputManager* linMan = static_cast<LinuxInputManager*>(mCreator);
+
+		if(linMan->_getGrabState() == false)
 		{
 			// are no longer grabbing
-			if( keyFocusLost == false )
+			if(keyFocusLost == false)
 			{
 				//UnGrab KeyBoard
 				XUngrabKeyboard(display, CurrentTime);
@@ -343,7 +282,7 @@ void LinuxKeyboard::capture()
 		else
 		{
 			//We are grabbing - and regained focus
-			if( keyFocusLost == true )
+			if(keyFocusLost == true)
 			{
 				//ReGrab KeyBoard
 				XGrabKeyboard(display, window, True, GrabModeAsync, GrabModeAsync, CurrentTime);
@@ -354,76 +293,148 @@ void LinuxKeyboard::capture()
 }
 
 //-------------------------------------------------------------------//
+void LinuxKeyboard::_handleKeyPress(XEvent& event)
+{
+	XKeyEvent& e = (XKeyEvent&)event;
+	static std::vector<char> buf(32);
+	KeySym keySym;
+	unsigned int character = 0;
+	int bytes			   = 0;
+	bool haveChar		   = true;
+
+	haveChar = !XFilterEvent(&event, None);
+
+	if(xic)
+	{
+		Status status;
+		do
+		{
+			bytes	   = Xutf8LookupString(xic, &e, &buf[0], buf.size() - 1, &keySym, &status);
+			buf[bytes] = '\0';
+
+			if(status == XBufferOverflow)
+				buf.resize(buf.size() * 2);
+		} while(status == XBufferOverflow);
+	}
+	else
+	{
+		bytes	   = XLookupString(&e, &buf[0], buf.size() - 1, &keySym, NULL);
+		buf[bytes] = '\0';
+	}
+
+	if(haveChar && bytes > 0)
+	{
+		if(mTextMode == Unicode)
+			character = UTF8ToUTF32(reinterpret_cast<unsigned char*>(&buf[0]));
+		else if(mTextMode == Ascii)
+			character = buf[0];
+	}
+
+	if(e.state & capsLockMask)
+		mModifiers |= CapsLock;
+	else
+		mModifiers &= ~CapsLock;
+
+	if(e.state & numLockMask)
+		mModifiers |= NumLock;
+	else
+		mModifiers &= ~NumLock;
+
+	KeyCode kc = KeySymToOISKeyCode(keySym);
+	_injectKeyDown(kc, character);
+
+	//Check for Alt-Tab
+	LinuxInputManager* linMan = static_cast<LinuxInputManager*>(mCreator);
+	if((e.state & Mod1Mask) && (keySym == XK_Tab))
+		linMan->_setGrabState(false);
+}
+
+void LinuxKeyboard::_handleKeyRelease(XEvent& event)
+{
+	XKeyEvent& e = (XKeyEvent&)event;
+	KeySym keySym;
+
+	XFilterEvent(&event, None);
+	if(!_isKeyRepeat(event))
+	{
+		XLookupString(&e, NULL, 0, &keySym, NULL);
+
+		KeyCode kc = KeySymToOISKeyCode(keySym);
+		_injectKeyUp(kc);
+	}
+}
+
+//-------------------------------------------------------------------//
 void LinuxKeyboard::setBuffered(bool buffered)
 {
 	mBuffered = buffered;
 }
 
 //-------------------------------------------------------------------//
-bool LinuxKeyboard::_injectKeyDown( KeySym key, int text )
+bool LinuxKeyboard::_injectKeyDown(KeyCode kc, int text)
 {
-	KeyCode kc = keyConversion[key];
+	if(kc > 255) kc = KC_UNASSIGNED;
 	KeyBuffer[kc] = 1;
 
 	//Turn on modifier flags
-	if( kc == KC_LCONTROL || kc == KC_RCONTROL)
+	if(kc == KC_LCONTROL || kc == KC_RCONTROL)
 		mModifiers |= Ctrl;
-	else if( kc == KC_LSHIFT || kc == KC_RSHIFT )
+	else if(kc == KC_LSHIFT || kc == KC_RSHIFT)
 		mModifiers |= Shift;
-	else if( kc == KC_LMENU || kc == KC_RMENU )
+	else if(kc == KC_LMENU || kc == KC_RMENU)
 		mModifiers |= Alt;
 
-	if( mBuffered && mListener )
-		return mListener->keyPressed(KeyEvent(this,kc,text));
+	if(mBuffered && mListener)
+		return mListener->keyPressed(KeyEvent(this, kc, text));
 
 	return true;
 }
 
 //-------------------------------------------------------------------//
-bool LinuxKeyboard::_injectKeyUp( KeySym key )
+bool LinuxKeyboard::_injectKeyUp(KeyCode kc)
 {
-	KeyCode kc = keyConversion[key];
+	if(kc > 255) kc = KC_UNASSIGNED;
 	KeyBuffer[kc] = 0;
 
 	//Turn off modifier flags
-	if( kc == KC_LCONTROL || kc == KC_RCONTROL)
+	if(kc == KC_LCONTROL || kc == KC_RCONTROL)
 		mModifiers &= ~Ctrl;
-	else if( kc == KC_LSHIFT || kc == KC_RSHIFT )
+	else if(kc == KC_LSHIFT || kc == KC_RSHIFT)
 		mModifiers &= ~Shift;
-	else if( kc == KC_LMENU || kc == KC_RMENU )
+	else if(kc == KC_LMENU || kc == KC_RMENU)
 		mModifiers &= ~Alt;
 
-	if( mBuffered && mListener )
+	if(mBuffered && mListener)
 		return mListener->keyReleased(KeyEvent(this, kc, 0));
 
 	return true;
 }
 
 //-------------------------------------------------------------------//
-const std::string& LinuxKeyboard::getAsString( KeyCode kc )
+const std::string& LinuxKeyboard::getAsString(KeyCode kc)
 {
 	mGetString = "Unknown";
-	char *temp = 0;
-
-	XtoOIS_KeyMap::iterator i = keyConversion.begin(),
-				e = keyConversion.end();
-
-	for( ; i != e; ++i )
+	char* temp = 0;
+	KeySym sym = OISKeyCodeToKeySym(kc);
+	if(sym != NoSymbol)
 	{
-		if( i->second == kc )
-		{
-			temp = XKeysymToString(i->first);
-			if( temp )
-				mGetString = temp;
-			break;
-		}
+		temp = XKeysymToString(sym);
+		if(temp)
+			mGetString = temp;
 	}
 
 	return mGetString;
 }
 
 //-------------------------------------------------------------------//
-void LinuxKeyboard::copyKeyStates( char keys[256] ) const
+OIS::KeyCode LinuxKeyboard::getAsKeyCode(std::string str)
 {
-	memcpy( keys, KeyBuffer, 256 );
+	KeySym X11Key = XStringToKeysym(str.c_str());
+	return KeySymToOISKeyCode(X11Key);
+}
+
+//-------------------------------------------------------------------//
+void LinuxKeyboard::copyKeyStates(char keys[256]) const
+{
+	memcpy(keys, KeyBuffer, 256);
 }

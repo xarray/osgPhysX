@@ -1,23 +1,27 @@
 /*
 The zlib/libpng License
 
-Copyright (c) 2005-2007 Phillip Castaneda (pjcast -- www.wreckedgames.com)
+Copyright (c) 2018 Arthur Brainville
+Copyright (c) 2015 Andrew Fenn
+Copyright (c) 2005-2010 Phillip Castaneda (pjcast -- www.wreckedgames.com)
 
-This software is provided 'as-is', without any express or implied warranty. In no event will
-the authors be held liable for any damages arising from the use of this software.
+This software is provided 'as-is', without any express or implied warranty. In no
+event will the authors be held liable for any damages arising from the use of this
+software.
 
-Permission is granted to anyone to use this software for any purpose, including commercial 
-applications, and to alter it and redistribute it freely, subject to the following
-restrictions:
+Permission is granted to anyone to use this software for any purpose, including
+commercial applications, and to alter it and redistribute it freely, subject to the
+following restrictions:
 
-    1. The origin of this software must not be misrepresented; you must not claim that 
-		you wrote the original software. If you use this software in a product, 
-		an acknowledgment in the product documentation would be appreciated but is 
-		not required.
+    1. The origin of this software must not be misrepresented; you must not claim that
+        you wrote the original software. If you use this software in a product,
+        an acknowledgment in the product documentation would be appreciated
+        but is not required.
 
-    2. Altered source versions must be plainly marked as such, and must not be 
-		misrepresented as being the original software.
+    2. Altered source versions must be plainly marked as such, and must not be
+        misrepresented as being the original software.
 
+    3. This notice may not be removed or altered from any source distribution.
     3. This notice may not be removed or altered from any source distribution.
 */
 #ifndef OIS_InputManager_H
@@ -52,28 +56,28 @@ namespace OIS
 		@returns
 			Version name
 		*/
-		const std::string &getVersionName();
+		const std::string& getVersionName();
 
 		/**
 		@remarks
-			Creates appropriate input system dependent on platform. 
+			Creates appropriate input system dependent on platform.
 		@param winHandle
 			Contains OS specific window handle (such as HWND or X11 Window)
 		@returns
 			A pointer to the created manager, or raises Exception
 		*/
-		static InputManager* createInputSystem( std::size_t winHandle );
+		static InputManager* createInputSystem(std::size_t winHandle);
 
 		/**
 		@remarks
-			Creates appropriate input system dependent on platform. 
+			Creates appropriate input system dependent on platform.
 		@param paramList
 			ParamList contains OS specific info (such as HWND and HINSTANCE for window apps),
 			and access mode.
 		@returns
 			A pointer to the created manager, or raises Exception
 		*/
-		static InputManager* createInputSystem( ParamList &paramList );
+		static InputManager* createInputSystem(ParamList& paramList);
 
 		/**
 		@remarks
@@ -94,7 +98,7 @@ namespace OIS
 		@param iType
 			Type that you are interested in
 		*/
-		int getNumberOfDevices( Type iType );
+		int getNumberOfDevices(Type iType);
 
 		/**
 		@remarks
@@ -109,12 +113,12 @@ namespace OIS
 			Tries to create an object with the specified vendor. If you have no
 			preference of vendor, leave vender as default (""). Raises exception on failure
 		*/
-		Object* createInputObject( Type iType, bool bufferMode, const std::string &vendor = "");
+		Object* createInputObject(Type iType, bool bufferMode, const std::string& vendor = "");
 
 		/**
 		@remarks Destroys Input Object
 		*/
-		void destroyInputObject( Object* obj );
+		void destroyInputObject(Object* obj);
 
 		/**
 		@remarks
@@ -137,7 +141,7 @@ namespace OIS
 			You can safely delete the factory instance once you have removed it or shut down the
 			input manager.
 		*/
-		void addFactoryCreator( FactoryCreator* factory );
+		void addFactoryCreator(FactoryCreator* factory);
 
 		/**
 		@remarks
@@ -147,14 +151,13 @@ namespace OIS
 		@notes
 			Removing a factory will automatically destroy any Objects created from the factory
 		*/
-		void removeFactoryCreator( FactoryCreator* factory );
+		void removeFactoryCreator(FactoryCreator* factory);
 
 		//! All generic devices OIS supports internally (if they are compiled in)
-		enum AddOnFactories
-		{
-			AddOn_All = 0,		//All Devices
-			AddOn_LIRC = 1,		//PC Linux Infrared Remote Control
-			AddOn_WiiMote = 2	//PC WiiMote Support
+		enum AddOnFactories {
+			AddOn_All	  = 0, //All Devices
+			AddOn_LIRC	  = 1, //PC Linux Infrared Remote Control
+			AddOn_WiiMote = 2  //PC WiiMote Support
 		};
 
 		/**
@@ -171,13 +174,13 @@ namespace OIS
 		@remarks
 			Called from createInputSystem, gives derived input class a chance to setup after it is created
 		*/
-		virtual void _initialize(ParamList &paramList) = 0;
+		virtual void _initialize(ParamList& paramList) = 0;
 
 		/**
 		@remarks
 			Derived classes must provide input system name
 		*/
-		InputManager(const std::string& name);
+		explicit InputManager(const std::string& name);
 
 		/**
 		@remarks
@@ -188,7 +191,7 @@ namespace OIS
 		//! OIS Version name
 		const std::string m_VersionName;
 
-		//! FactoryCreator list	
+		//! FactoryCreator list
 		FactoryList mFactories;
 
 		//! Factory created objects - useful so we can find creator to send destruction request to
@@ -198,8 +201,13 @@ namespace OIS
 		const std::string mInputSystemName;
 
 		//! Extra factory (not enabled by default)
-		LIRCFactoryCreator *m_lircSupport;
-		WiiMoteFactoryCreator *m_wiiMoteSupport;
+		LIRCFactoryCreator* m_lircSupport;
+		WiiMoteFactoryCreator* m_wiiMoteSupport;
+
+	private:
+		// Prevent copying.
+		InputManager(const InputManager&);
+		InputManager& operator=(const InputManager&);
 	};
 }
 #endif

@@ -1,24 +1,27 @@
 /*
 The zlib/libpng License
 
-Copyright (c) 2005-2007 Phillip Castaneda (pjcast -- www.wreckedgames.com)
+Copyright (c) 2018 Arthur Brainville
+Copyright (c) 2015 Andrew Fenn
+Copyright (c) 2005-2010 Phillip Castaneda (pjcast -- www.wreckedgames.com)
 
-This software is provided 'as-is', without any express or implied warranty. In no event will
-the authors be held liable for any damages arising from the use of this software.
+This software is provided 'as-is', without any express or implied warranty. In no
+event will the authors be held liable for any damages arising from the use of this
+software.
 
-Permission is granted to anyone to use this software for any purpose, including commercial
-applications, and to alter it and redistribute it freely, subject to the following
-restrictions:
+Permission is granted to anyone to use this software for any purpose, including
+commercial applications, and to alter it and redistribute it freely, subject to the
+following restrictions:
 
     1. The origin of this software must not be misrepresented; you must not claim that
-		you wrote the original software. If you use this software in a product,
-		an acknowledgment in the product documentation would be appreciated but is
-		not required.
+        you wrote the original software. If you use this software in a product,
+        an acknowledgment in the product documentation would be appreciated
+        but is not required.
 
     2. Altered source versions must be plainly marked as such, and must not be
-		misrepresented as being the original software.
+        misrepresented as being the original software.
 
-    3. This notice may not be removed or altered from any source distribution.
+    3. This notice may not be removed or altered from any source distribution.   
 */
 #ifndef OIS_Effect_H
 #define OIS_Effect_H
@@ -46,14 +49,9 @@ namespace OIS
 	*/
 	class _OISExport Effect
 	{
-		/**
-			hidden so this class cannot be instanced with default constructor
-		*/
-		Effect();
 	public:
 		//! Type of force
-		enum EForce
-		{
+		enum EForce {
 			UnknownForce = 0,
 			ConstantForce,
 			RampForce,
@@ -66,30 +64,28 @@ namespace OIS
 		static const char* getForceTypeName(EForce eValue);
 
 		//! Type of effect
-		enum EType
-		{
+		enum EType {
 			//Type ----- Pairs with force:
-			Unknown = 0, //UnknownForce
-			Constant,    //ConstantForce
-			Ramp,        //RampForce
-			Square,      //PeriodicForce
-			Triangle,    //PeriodicForce
-            Sine,        //PeriodicForce
-			SawToothUp,  //PeriodicForce
-			SawToothDown,//PeriodicForce
-			Friction,    //ConditionalForce
-			Damper,      //ConditionalForce
-			Inertia,     //ConditionalForce
-			Spring,      //ConditionalForce
-			Custom,      //CustomForce
-			_TypesNumber // Always keep in last position.
+			Unknown = 0,  //UnknownForce
+			Constant,	  //ConstantForce
+			Ramp,		  //RampForce
+			Square,		  //PeriodicForce
+			Triangle,	  //PeriodicForce
+			Sine,		  //PeriodicForce
+			SawToothUp,	  //PeriodicForce
+			SawToothDown, //PeriodicForce
+			Friction,	  //ConditionalForce
+			Damper,		  //ConditionalForce
+			Inertia,	  //ConditionalForce
+			Spring,		  //ConditionalForce
+			Custom,		  //CustomForce
+			_TypesNumber  // Always keep in last position.
 		};
 
 		static const char* getEffectTypeName(EType eValue);
 
 		//! Direction of the Force
-		enum EDirection
-		{
+		enum EDirection {
 			NorthWest,
 			North,
 			NorthEast,
@@ -157,9 +153,14 @@ namespace OIS
 			with const reference it can/will be changed by this lib
 		*/
 		mutable int _handle;
+
 	protected:
+		// Prevent copying.
+		Effect(const Effect&);
+		Effect& operator=(Effect);
+
 		ForceEffect* effect; //Properties depend on EForce
-		short axes;          //Number of axes to use in effect
+		short axes;			 //Number of axes to use in effect
 	};
 
 	//-----------------------------------------------------------------------------//
@@ -169,7 +170,7 @@ namespace OIS
 	class _OISExport ForceEffect
 	{
 	public:
-		virtual ~ForceEffect() {}
+		virtual ~ForceEffect() { }
 	};
 
 	//-----------------------------------------------------------------------------//
@@ -181,14 +182,18 @@ namespace OIS
 	class _OISExport Envelope : public ForceEffect
 	{
 	public:
-		Envelope() : attackLength(0), attackLevel(0), fadeLength(0), fadeLevel(0) {}
+		Envelope() :
+		 attackLength(0), attackLevel(0), fadeLength(0), fadeLevel(0) { }
 #if defined(OIS_MSVC_COMPILER)
-  #pragma warning (push)
-  #pragma warning (disable : 4800)
+#pragma warning(push)
+#pragma warning(disable : 4800)
 #endif
-		bool isUsed() const { return attackLength | attackLevel | fadeLength | fadeLevel; }
+		bool isUsed() const
+		{
+			return attackLength | attackLevel | fadeLength | fadeLevel;
+		}
 #if defined(OIS_MSVC_COMPILER)
-  #pragma warning (pop)
+#pragma warning(pop)
 #endif
 
 		// Duration of the attack (microseconds)
@@ -213,10 +218,11 @@ namespace OIS
 	class _OISExport ConstantEffect : public ForceEffect
 	{
 	public:
-		ConstantEffect() : level(5000) {}
+		ConstantEffect() :
+		 level(5000) { }
 
-		class Envelope envelope; //Optional envolope
-		signed short level;       //-10K to +10k
+		Envelope envelope;	//Optional envolope
+		signed short level; //-10K to +10k
 	};
 
 	//-----------------------------------------------------------------------------//
@@ -226,11 +232,12 @@ namespace OIS
 	class _OISExport RampEffect : public ForceEffect
 	{
 	public:
-		RampEffect() : startLevel(0), endLevel(0) {}
+		RampEffect() :
+		 startLevel(0), endLevel(0) { }
 
-        class Envelope envelope; //Optional envelope
-		signed short startLevel;  //-10K to +10k
-		signed short endLevel;    //-10K to +10k
+		Envelope envelope;		 //Optional envelope
+		signed short startLevel; //-10K to +10k
+		signed short endLevel;	 //-10K to +10k
 	};
 
 	//-----------------------------------------------------------------------------//
@@ -240,14 +247,15 @@ namespace OIS
 	class _OISExport PeriodicEffect : public ForceEffect
 	{
 	public:
-		PeriodicEffect() : magnitude(0), offset(0), phase(0), period(0) {}
+		PeriodicEffect() :
+		 magnitude(0), offset(0), phase(0), period(0) { }
 
-		class Envelope envelope;  //Optional Envelope
+		Envelope envelope; //Optional Envelope
 
-		unsigned short magnitude;  //0 to 10,0000
-		signed short   offset;
-		unsigned short phase;      //Position at which playback begins 0 to 35,999
-		unsigned int   period;     //Period of effect (microseconds)
+		unsigned short magnitude; //0 to 10,0000
+		signed short offset;
+		unsigned short phase; //Position at which playback begins 0 to 35,999
+		unsigned int period;  //Period of effect (microseconds)
 	};
 
 	//-----------------------------------------------------------------------------//
@@ -258,14 +266,14 @@ namespace OIS
 	{
 	public:
 		ConditionalEffect() :
-            rightCoeff(0), leftCoeff(0), rightSaturation(0), leftSaturation(0),
-			deadband(0), center(0) {}
+		 rightCoeff(0), leftCoeff(0), rightSaturation(0), leftSaturation(0),
+		 deadband(0), center(0) { }
 
-		signed short   rightCoeff;      //-10k to +10k (Positive Coeff)
-		signed short   leftCoeff;       //-10k to +10k (Negative Coeff)
+		signed short rightCoeff; //-10k to +10k (Positive Coeff)
+		signed short leftCoeff;	 //-10k to +10k (Negative Coeff)
 
 		unsigned short rightSaturation; //0 to 10k (Pos Saturation)
-		unsigned short leftSaturation;  //0 to 10k (Neg Saturation)
+		unsigned short leftSaturation;	//0 to 10k (Neg Saturation)
 
 		//Region around center in which the condition is not active, in the range
 		//from 0 through 10,000

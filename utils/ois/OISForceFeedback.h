@@ -1,24 +1,27 @@
 /*
 The zlib/libpng License
 
-Copyright (c) 2005-2007 Phillip Castaneda (pjcast -- www.wreckedgames.com)
+Copyright (c) 2018 Arthur Brainville
+Copyright (c) 2015 Andrew Fenn
+Copyright (c) 2005-2010 Phillip Castaneda (pjcast -- www.wreckedgames.com)
 
-This software is provided 'as-is', without any express or implied warranty. In no event will
-the authors be held liable for any damages arising from the use of this software.
+This software is provided 'as-is', without any express or implied warranty. In no
+event will the authors be held liable for any damages arising from the use of this
+software.
 
-Permission is granted to anyone to use this software for any purpose, including commercial 
-applications, and to alter it and redistribute it freely, subject to the following
-restrictions:
+Permission is granted to anyone to use this software for any purpose, including
+commercial applications, and to alter it and redistribute it freely, subject to the
+following restrictions:
 
-    1. The origin of this software must not be misrepresented; you must not claim that 
-		you wrote the original software. If you use this software in a product, 
-		an acknowledgment in the product documentation would be appreciated but is 
-		not required.
+    1. The origin of this software must not be misrepresented; you must not claim that
+        you wrote the original software. If you use this software in a product,
+        an acknowledgment in the product documentation would be appreciated
+        but is not required.
 
-    2. Altered source versions must be plainly marked as such, and must not be 
-		misrepresented as being the original software.
+    2. Altered source versions must be plainly marked as such, and must not be
+        misrepresented as being the original software.
 
-    3. This notice may not be removed or altered from any source distribution.
+    3. This notice may not be removed or altered from any source distribution.   
 */
 #ifndef OIS_ForceFeedBack_H
 #define OIS_ForceFeedBack_H
@@ -36,7 +39,7 @@ namespace OIS
 	{
 	public:
 		ForceFeedback();
-		virtual ~ForceFeedback() {}
+		virtual ~ForceFeedback() { }
 
 		/**
 		@remarks
@@ -48,8 +51,8 @@ namespace OIS
 			A value between 0.0 and 1.0 represent the percentage of gain. 1.0
 			being the highest possible force level (means no scaling).
 		*/
-		virtual void setMasterGain( float level ) = 0;
-		
+		virtual void setMasterGain(float level) = 0;
+
 		/**
 		@remarks
 			If using Force Feedback effects, this should be turned off
@@ -60,7 +63,7 @@ namespace OIS
 		@param auto_on
 			true to turn auto centering on, false to turn off.
 		*/
-		virtual void setAutoCenterMode( bool auto_on ) = 0;
+		virtual void setAutoCenterMode(bool auto_on) = 0;
 
 		/**
 		@remarks
@@ -68,29 +71,29 @@ namespace OIS
 			of effects, it will fail to be uploaded. You will know this by
 			an invalid Effect Handle
 		*/
-		virtual void upload( const Effect* effect ) = 0;
+		virtual void upload(const Effect* effect) = 0;
 
 		/**
 		@remarks
 			Modifies an effect that is currently playing
 		*/
-		virtual void modify( const Effect* effect ) = 0;
+		virtual void modify(const Effect* effect) = 0;
 
 		/**
 		@remarks
 			Remove the effect from the device
 		*/
-		virtual void remove( const Effect* effect ) = 0;
+		virtual void remove(const Effect* effect) = 0;
 
 		/**
 		@remarks
 			Get the number of supported Axes for FF usage
 		*/
-        virtual short getFFAxesNumber() = 0;
+		virtual short getFFAxesNumber() = 0;
 
 		/**
 		@remarks
-			Get the current load (%, in [0, 100] of the FF device memory 
+			Get the current load (%, in [0, 100] of the FF device memory
 		*/
 		virtual unsigned short getFFMemoryLoad() = 0;
 
@@ -107,9 +110,9 @@ namespace OIS
 		*/
 		bool supportsEffect(Effect::EForce force, Effect::EType type) const;
 
-		void _addEffectTypes( Effect::EForce force, Effect::EType type );
-		void _setGainSupport( bool on );
-		void _setAutoCenterSupport( bool on );
+		void _addEffectTypes(Effect::EForce force, Effect::EType type);
+		void _setGainSupport(bool on);
+		void _setAutoCenterSupport(bool on);
 
 	protected:
 		SupportedEffectList mSupportedEffects;

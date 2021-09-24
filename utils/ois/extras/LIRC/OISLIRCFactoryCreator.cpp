@@ -3,24 +3,27 @@
 /*
 The zlib/libpng License
 
-Copyright (c) 2005-2007 Phillip Castaneda (pjcast -- www.wreckedgames.com)
+Copyright (c) 2018 Arthur Brainville
+Copyright (c) 2015 Andrew Fenn
+Copyright (c) 2005-2010 Phillip Castaneda (pjcast -- www.wreckedgames.com)
 
-This software is provided 'as-is', without any express or implied warranty. In no event will
-the authors be held liable for any damages arising from the use of this software.
+This software is provided 'as-is', without any express or implied warranty. In no
+event will the authors be held liable for any damages arising from the use of this
+software.
 
-Permission is granted to anyone to use this software for any purpose, including commercial 
-applications, and to alter it and redistribute it freely, subject to the following
-restrictions:
+Permission is granted to anyone to use this software for any purpose, including
+commercial applications, and to alter it and redistribute it freely, subject to the
+following restrictions:
 
-    1. The origin of this software must not be misrepresented; you must not claim that 
-		you wrote the original software. If you use this software in a product, 
-		an acknowledgment in the product documentation would be appreciated but is 
-		not required.
+    1. The origin of this software must not be misrepresented; you must not claim that
+        you wrote the original software. If you use this software in a product,
+        an acknowledgment in the product documentation would be appreciated
+        but is not required.
 
-    2. Altered source versions must be plainly marked as such, and must not be 
-		misrepresented as being the original software.
+    2. Altered source versions must be plainly marked as such, and must not be
+        misrepresented as being the original software.
 
-    3. This notice may not be removed or altered from any source distribution.
+    3. This notice may not be removed or altered from any source distribution.   
 */
 #include "OISLIRCFactoryCreator.h"
 #include "OISException.h"
@@ -28,11 +31,11 @@ restrictions:
 #include <stdlib.h>
 
 #ifdef OIS_WIN32_PLATFORM
-#  pragma warning (disable : 4996)
-#  pragma warning (disable : 4267)
-#  pragma warning (disable : 4554)
-#  pragma warning (disable : 4996)
-#  define _WIN32_WINNT 0x0500
+#pragma warning(disable : 4996)
+#pragma warning(disable : 4267)
+#pragma warning(disable : 4554)
+#pragma warning(disable : 4996)
+#define _WIN32_WINNT 0x0500
 #endif
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
@@ -47,7 +50,8 @@ using namespace OIS;
 class LIRCFactoryCreator::BoostWrapper
 {
 public:
-	LIRCFactoryCreator::BoostWrapper() : mSocket(mIOService), mThreadHandler(0)
+	LIRCFactoryCreator::BoostWrapper() :
+	 mSocket(mIOService), mThreadHandler(0)
 	{
 	}
 
@@ -57,23 +61,22 @@ public:
 
 	//Thread Stuff
 	//! Boost thread execution object (only alive when at least 1 lirc is alive)
-	boost::thread *mThreadHandler;
-		
+	boost::thread* mThreadHandler;
+
 	//! Gaurds access to the active lirc list
 	boost::mutex mLircListMutex;
-
 };
 
 //---------------------------------------------------------------------------------//
 LIRCFactoryCreator::LIRCFactoryCreator() :
-	mConnected(false),
-	mThreadRunning(false),
-	mCount(0),
-	mWrapped(0)
+ mConnected(false),
+ mThreadRunning(false),
+ mCount(0),
+ mWrapped(0)
 {
 	mWrapped = new BoostWrapper();
 
-	mIP   = (getenv("OIS_LIRC_IP") != 0) ? getenv("OIS_LIRC_IP") : "127.0.0.1";
+	mIP	  = (getenv("OIS_LIRC_IP") != 0) ? getenv("OIS_LIRC_IP") : "127.0.0.1";
 	mPort = (getenv("OIS_LIRC_PORT") != 0) ? getenv("OIS_LIRC_PORT") : "8765";
 
 	try
@@ -111,7 +114,7 @@ void LIRCFactoryCreator::discoverRemotes()
 
 	//Read all remotes
 	bool start = false;
-	bool data = false;
+	bool data  = false;
 	for(;;)
 	{
 		boost::asio::read_until(mWrapped->mSocket, buffer, '\n');
@@ -120,24 +123,24 @@ void LIRCFactoryCreator::discoverRemotes()
 		std::string res;
 		str >> res;
 
-		if( res == "" )				//If nothing left, we are done
+		if(res == "") //If nothing left, we are done
 			break;
-		else if( res == "ERROR" )	//If any errors, we leave immediately
+		else if(res == "ERROR") //If any errors, we leave immediately
 			return;
-		else if( res == "END" )		//We have reached the end block
+		else if(res == "END") //We have reached the end block
 			start = false;
-		else if( res == "DATA" )	//After Data will be a list of remote names
+		else if(res == "DATA") //After Data will be a list of remote names
 		{
 			start = true;
-			data = true;
+			data  = true;
 			continue;
 		}
 
 		//Have we  gotten the DATA word yet?
-		if( start == false )
+		if(start == false)
 			continue;
 
-		if( data ) //How many?
+		if(data) //How many?
 			mCount = atoi(res.c_str());
 		else //What follows should now be a list of remote names
 			mUnusedRemotes.push_back(res);
@@ -147,17 +150,17 @@ void LIRCFactoryCreator::discoverRemotes()
 
 	//Read information about each remote
 	boost::asio::streambuf buffer2;
-	for( int i = 0; i < mCount; ++i )
+	for(int i = 0; i < mCount; ++i)
 	{
 		std::ostringstream istr;
 		istr << "LIST " << mUnusedRemotes[i] << "\n";
-		
+
 		mWrapped->mSocket.write_some(boost::asio::buffer(istr.str()));
 		RemoteInfo information;
 		int buttonCount = 0;
 
 		start = data = false;
-		
+
 		for(;;)
 		{
 			boost::asio::read_until(mWrapped->mSocket, buffer, '\n');
@@ -166,24 +169,24 @@ void LIRCFactoryCreator::discoverRemotes()
 			std::string res;
 			str >> res;
 
-			if( res == "" )				//If nothing left, we are done
+			if(res == "") //If nothing left, we are done
 				break;
-			else if( res == "ERROR" )	//If error, bail out
+			else if(res == "ERROR") //If error, bail out
 				return;
-			else if( res == "END" )		//We have reached the end block
+			else if(res == "END") //We have reached the end block
 				start = false;
-			else if( res == "DATA" )	//After Data will be button count
+			else if(res == "DATA") //After Data will be button count
 			{
 				start = true;
-				data = true;
+				data  = true;
 				continue;
 			}
 
 			//Have we  gotten the DATA word yet?
-			if( start == false )
+			if(start == false)
 				continue;
 
-			if( data ) //After button count, there will be a list of button names
+			if(data) //After button count, there will be a list of button names
 				information.buttons = atoi(res.c_str());
 			else
 				information.buttonMap[res] = buttonCount++;
@@ -198,7 +201,7 @@ void LIRCFactoryCreator::discoverRemotes()
 //---------------------------------------------------------------------------------//
 void LIRCFactoryCreator::enableConnection(bool enable, bool blocking)
 {
-	if( enable == true && mConnected == false )
+	if(enable == true && mConnected == false)
 	{
 		boost::asio::ip::tcp::resolver resolver(mWrapped->mIOService);
 		boost::asio::ip::tcp::resolver::query query(mIP, mPort);
@@ -207,23 +210,23 @@ void LIRCFactoryCreator::enableConnection(bool enable, bool blocking)
 
 		//Connect (trying all found connections - ip4/ip6)
 		boost::asio::error result = boost::asio::error::host_not_found;
-		while (result && endpoint_iterator != end)
+		while(result && endpoint_iterator != end)
 		{
 			mWrapped->mSocket.close();
 			mWrapped->mSocket.connect(*endpoint_iterator++, boost::asio::assign_error(result));
 		}
 
-		if (result != boost::asio::error::success)
-			throw (result);
+		if(result != boost::asio::error::success)
+			throw(result);
 
-		if( blocking == false )
+		if(blocking == false)
 		{
 			mWrapped->mSocket.io_control(boost::asio::socket_base::non_blocking_io(true));
 		}
 
 		mConnected = true;
 	}
-	else if( enable == false )
+	else if(enable == false)
 	{
 		mWrapped->mSocket.close();
 		mConnected = false;
@@ -233,12 +236,12 @@ void LIRCFactoryCreator::enableConnection(bool enable, bool blocking)
 //---------------------------------------------------------------------------------//
 void LIRCFactoryCreator::enableConnectionThread(bool enable)
 {
-	if( enable == true && mThreadRunning == false )
+	if(enable == true && mThreadRunning == false)
 	{
-		mThreadRunning = true;
+		mThreadRunning			 = true;
 		mWrapped->mThreadHandler = new boost::thread(boost::bind(&LIRCFactoryCreator::threadUpdate, this));
 	}
-	else if( enable == false && mThreadRunning == true )
+	else if(enable == false && mThreadRunning == true)
 	{
 		mThreadRunning = false;
 		mWrapped->mThreadHandler->join();
@@ -255,24 +258,23 @@ void LIRCFactoryCreator::threadUpdate()
 	std::istream stream(&buffer);
 	std::string code, repeat, button, remote;
 
-
-	while( mThreadRunning )
+	while(mThreadRunning)
 	{
 		try
 		{
-			while(  mWrapped->mSocket.in_avail() > 0 )
+			while(mWrapped->mSocket.in_avail() > 0)
 			{
 				boost::asio::read_until(mWrapped->mSocket, buffer, '\n');
-				
-				stream >> code;   //64 bit value, ignorable
+
+				stream >> code;	  //64 bit value, ignorable
 				stream >> repeat; //Repeat rate starting at zero (we ignore, for now)
 				stream >> button; //Button name
 				stream >> remote; //Remote name
 
-				{	//Lock object, find out which remote sent event
+				{ //Lock object, find out which remote sent event
 					boost::mutex::scoped_lock arrayLock(mWrapped->mLircListMutex);
 					std::map<std::string, LIRCControl*>::iterator i = mUpdateRemotes.find(remote);
-					if( i != mUpdateRemotes.end() )
+					if(i != mUpdateRemotes.end())
 					{
 						i->second->queueButtonPressed(button);
 					}
@@ -280,9 +282,9 @@ void LIRCFactoryCreator::threadUpdate()
 			}
 		}
 		catch(...)
-		{	//Hmm, what should we do if we get a socket error here.. Ignore it I suppose,
-		}	//and wait till the used remote objects get shutdown. We could try to 
-			//reconnect, but how do we know if we will even get the same remotes.
+		{ //Hmm, what should we do if we get a socket error here.. Ignore it I suppose,
+		} //and wait till the used remote objects get shutdown. We could try to
+		  //reconnect, but how do we know if we will even get the same remotes.
 
 		boost::xtime_get(&timer, boost::TIME_UTC);
 		timer.nsec += 300000000; // 100 000 000 ~= .3 sec
@@ -294,7 +296,7 @@ void LIRCFactoryCreator::threadUpdate()
 DeviceList LIRCFactoryCreator::freeDeviceList()
 {
 	DeviceList list;
-	for( std::vector<std::string>::iterator i = mUnusedRemotes.begin(); i != mUnusedRemotes.end(); ++i )
+	for(std::vector<std::string>::iterator i = mUnusedRemotes.begin(); i != mUnusedRemotes.end(); ++i)
 		list.insert(std::make_pair(OISJoyStick, *i));
 
 	return list;
@@ -303,7 +305,7 @@ DeviceList LIRCFactoryCreator::freeDeviceList()
 //---------------------------------------------------------------------------------//
 int LIRCFactoryCreator::totalDevices(Type iType)
 {
-	if( iType == OISJoyStick )
+	if(iType == OISJoyStick)
 		return mCount;
 	else
 		return 0;
@@ -312,33 +314,33 @@ int LIRCFactoryCreator::totalDevices(Type iType)
 //---------------------------------------------------------------------------------//
 int LIRCFactoryCreator::freeDevices(Type iType)
 {
-	if( iType == OISJoyStick )
+	if(iType == OISJoyStick)
 		return (int)mUnusedRemotes.size();
 	else
 		return 0;
 }
 
 //---------------------------------------------------------------------------------//
-bool LIRCFactoryCreator::vendorExist(Type iType, const std::string & vendor)
+bool LIRCFactoryCreator::vendorExist(Type iType, const std::string& vendor)
 {
-	if( iType == OISJoyStick && std::find(mUnusedRemotes.begin(), mUnusedRemotes.end(), vendor) != mUnusedRemotes.end() )
+	if(iType == OISJoyStick && std::find(mUnusedRemotes.begin(), mUnusedRemotes.end(), vendor) != mUnusedRemotes.end())
 		return true;
 	else
 		return false;
 }
 
 //---------------------------------------------------------------------------------//
-Object* LIRCFactoryCreator::createObject(InputManager* creator, Type iType, bool bufferMode, const std::string & vendor)
+Object* LIRCFactoryCreator::createObject(InputManager* creator, Type iType, bool bufferMode, const std::string& vendor)
 {
-	if( mUnusedRemotes.size() > 0 )
+	if(mUnusedRemotes.size() > 0)
 	{
 		std::vector<std::string>::iterator remote = mUnusedRemotes.end();
-		if( vendor == "" )
+		if(vendor == "")
 			remote = mUnusedRemotes.begin();
 		else
 			remote = std::find(mUnusedRemotes.begin(), mUnusedRemotes.end(), vendor);
 
-		if( remote != mUnusedRemotes.end() )
+		if(remote != mUnusedRemotes.end())
 		{
 			//Make sure connection is established
 			enableConnection(true, false);
@@ -347,7 +349,7 @@ Object* LIRCFactoryCreator::createObject(InputManager* creator, Type iType, bool
 			enableConnectionThread(true);
 
 			//Create device
-			LIRCControl *obj = new LIRCControl(creator, 0, bufferMode, this, mJoyStickInformation[*remote]);
+			LIRCControl* obj = new LIRCControl(creator, 0, bufferMode, this, mJoyStickInformation[*remote]);
 
 			//Add to used list, and then remove from unused list
 			{
@@ -359,19 +361,19 @@ Object* LIRCFactoryCreator::createObject(InputManager* creator, Type iType, bool
 			return obj;
 		}
 	}
-	
+
 	OIS_EXCEPT(E_InputDeviceNonExistant, "No Device found which matches description!");
 }
 
 //---------------------------------------------------------------------------------//
 void LIRCFactoryCreator::destroyObject(Object* obj)
 {
-	if( obj == 0 )
+	if(obj == 0)
 		return;
 
 	int remotes_alive = 0;
 
-	{	//Scope lock
+	{ //Scope lock
 		boost::mutex::scoped_lock arrayLock(mWrapped->mLircListMutex);
 
 		//Find object
@@ -379,27 +381,27 @@ void LIRCFactoryCreator::destroyObject(Object* obj)
 		bool found = false;
 		for(; i != e; ++i)
 		{
-			if( i->second == obj )
+			if(i->second == obj)
 			{
 				found = true;
 				break;
 			}
 		}
 
-		if( found == false )
+		if(found == false)
 			OIS_EXCEPT(E_General, "Device not found in LIRC remote collection!");
 
 		//Move from used to unused list
 		mUnusedRemotes.push_back(i->first);
 		mUpdateRemotes.erase(i);
-		
+
 		delete obj;
 
 		remotes_alive = (int)mUpdateRemotes.size();
 	}
 
 	//Destroy thread if no longer in use (we do this after unlocking mutex!)
-	if( remotes_alive == 0 )
+	if(remotes_alive == 0)
 		enableConnectionThread(false);
 }
 #endif

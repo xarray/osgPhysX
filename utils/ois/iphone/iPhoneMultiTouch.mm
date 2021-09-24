@@ -1,24 +1,27 @@
 /*
- The zlib/libpng License
- 
- Copyright (c) 2005-2007 Phillip Castaneda (pjcast -- www.wreckedgames.com)
- 
- This software is provided 'as-is', without any express or implied warranty. In no event will
- the authors be held liable for any damages arising from the use of this software.
- 
- Permission is granted to anyone to use this software for any purpose, including commercial 
- applications, and to alter it and redistribute it freely, subject to the following
- restrictions:
- 
- 1. The origin of this software must not be misrepresented; you must not claim that 
- you wrote the original software. If you use this software in a product, 
- an acknowledgment in the product documentation would be appreciated but is 
- not required.
- 
- 2. Altered source versions must be plainly marked as such, and must not be 
- misrepresented as being the original software.
- 
- 3. This notice may not be removed or altered from any source distribution.
+The zlib/libpng License
+
+Copyright (c) 2018 Arthur Brainville
+Copyright (c) 2015 Andrew Fenn
+Copyright (c) 2005-2010 Phillip Castaneda (pjcast -- www.wreckedgames.com)
+
+This software is provided 'as-is', without any express or implied warranty. In no
+event will the authors be held liable for any damages arising from the use of this
+software.
+
+Permission is granted to anyone to use this software for any purpose, including
+commercial applications, and to alter it and redistribute it freely, subject to the
+following restrictions:
+
+    1. The origin of this software must not be misrepresented; you must not claim that
+        you wrote the original software. If you use this software in a product,
+        an acknowledgment in the product documentation would be appreciated
+        but is not required.
+
+    2. Altered source versions must be plainly marked as such, and must not be
+        misrepresented as being the original software.
+
+    3. This notice may not be removed or altered from any source distribution. 
  */
 #include "iphone/iPhoneMultiTouch.h"
 #include "iphone/iPhoneInputManager.h"
@@ -26,29 +29,29 @@
 using namespace OIS;
 
 //-------------------------------------------------------------------//
-iPhoneMultiTouch::iPhoneMultiTouch( InputManager* creator, bool buffered )
-	: MultiTouch(creator->inputSystemName(), buffered, 0, creator)
+iPhoneMultiTouch::iPhoneMultiTouch(InputManager* creator, bool buffered) :
+ MultiTouch(creator->inputSystemName(), buffered, 0, creator)
 {
-	iPhoneInputManager *man = static_cast<iPhoneInputManager*>(mCreator);
+	iPhoneInputManager* man = static_cast<iPhoneInputManager*>(mCreator);
 
-    man->_setMultiTouchUsed(true);
-    [man->_getDelegate() setTouchObject:this];
+	man->_setMultiTouchUsed(true);
+	[man->_getDelegate() setTouchObject:this];
 }
 
 iPhoneMultiTouch::~iPhoneMultiTouch()
 {
-	iPhoneInputManager *man = static_cast<iPhoneInputManager*>(mCreator);
-    
-    man->_setMultiTouchUsed(false);
-    [man->_getDelegate() setTouchObject:nil];
+	iPhoneInputManager* man = static_cast<iPhoneInputManager*>(mCreator);
+
+	man->_setMultiTouchUsed(false);
+	[man->_getDelegate() setTouchObject:nil];
 }
 
 void iPhoneMultiTouch::_initialize()
 {
-//    mTempState.clear();
+	//    mTempState.clear();
 }
 
-void iPhoneMultiTouch::setBuffered( bool buffered )
+void iPhoneMultiTouch::setBuffered(bool buffered)
 {
 	mBuffered = buffered;
 }
@@ -70,11 +73,11 @@ void iPhoneMultiTouch::capture()
             iState->X.rel = mTempState.X.rel;
             iState->Y.rel = mTempState.Y.rel;
             iState->Z.rel = mTempState.Z.rel;
-            
+
             // Update absolute position
             iState->X.abs += mTempState.X.rel;
             iState->Y.abs += mTempState.Y.rel;
-            
+
             if(iState->X.abs > iState->width)
                 iState->X.abs = iState->width;
             else if(iState->X.abs < 0)
@@ -84,9 +87,9 @@ void iPhoneMultiTouch::capture()
                 iState->Y.abs = iState->height;
             else if(iState->Y.abs < 0)
                 iState->Y.abs = 0;
-                
+
             iState->Z.abs += mTempState.Z.rel;
-            
+
             //Fire off event
             if(mListener && mBuffered)
                 mListener->touchMoved(MultiTouchEvent(this, *iState));
@@ -97,107 +100,81 @@ void iPhoneMultiTouch::capture()
 #endif
 }
 
-void iPhoneMultiTouch::_touchBegan(UITouch *touch)
+void iPhoneMultiTouch::_touchBegan(UITouch* touch)
 {
-    UIView *touchView = static_cast<iPhoneInputManager*>(mCreator)->_getDelegate();
-    CGPoint location = [touch locationInView:touchView];
-    CGFloat contentScale = 1.0;
-#if __IPHONE_4_0
-    if([touchView respondsToSelector:@selector(contentScaleFactor)])
-        contentScale = [[UIScreen mainScreen] scale];
-#endif
+	CGPoint location = [touch locationInView:static_cast<iPhoneInputManager*>(mCreator)->_getDelegate()];
 
-    MultiTouchState newState;
-    newState.X.abs = location.x * contentScale;
-    newState.Y.abs = location.y * contentScale;
-    newState.touchType |= 1 << MT_Pressed;
+	MultiTouchState newState;
+	newState.X.abs = location.x;
+	newState.Y.abs = location.y;
+	newState.touchType |= 1 << MT_Pressed;
 
-    if( mListener && mBuffered )
-    {
-        mListener->touchPressed(MultiTouchEvent(this, newState));
-    }
-    else
-    {
-        mStates.push_back(newState);
-    }
+	if(mListener && mBuffered)
+	{
+		mListener->touchPressed(MultiTouchEvent(this, newState));
+	}
+	else
+	{
+		mStates.push_back(newState);
+	}
 }
 
-void iPhoneMultiTouch::_touchEnded(UITouch *touch)
+void iPhoneMultiTouch::_touchEnded(UITouch* touch)
 {
-    UIView *touchView = static_cast<iPhoneInputManager*>(mCreator)->_getDelegate();
-    CGPoint location = [touch locationInView:touchView];
-    CGFloat contentScale = 1.0;
-#if __IPHONE_4_0
-    if([touchView respondsToSelector:@selector(contentScaleFactor)])
-        contentScale = [[UIScreen mainScreen] scale];
-#endif
+	CGPoint location = [touch locationInView:static_cast<iPhoneInputManager*>(mCreator)->_getDelegate()];
 
-    MultiTouchState newState;
-    newState.X.abs = location.x * contentScale;
-    newState.Y.abs = location.y * contentScale;
-    newState.touchType |= 1 << MT_Released;
+	MultiTouchState newState;
+	newState.X.abs = location.x;
+	newState.Y.abs = location.y;
+	newState.touchType |= 1 << MT_Released;
 
-    if( mListener && mBuffered )
-    {
-        mListener->touchReleased(MultiTouchEvent(this, newState));
-    }
-    else
-    {
-        mStates.push_back(newState);
-    }
+	if(mListener && mBuffered)
+	{
+		mListener->touchReleased(MultiTouchEvent(this, newState));
+	}
+	else
+	{
+		mStates.push_back(newState);
+	}
 }
 
-void iPhoneMultiTouch::_touchMoved(UITouch *touch)
+void iPhoneMultiTouch::_touchMoved(UITouch* touch)
 {
-    UIView *touchView = static_cast<iPhoneInputManager*>(mCreator)->_getDelegate();
-    CGPoint location = [touch locationInView:touchView];
-    CGPoint previousLocation = [touch previousLocationInView:touchView];
+	CGPoint location		 = [touch locationInView:static_cast<iPhoneInputManager*>(mCreator)->_getDelegate()];
+	CGPoint previousLocation = [touch previousLocationInView:static_cast<iPhoneInputManager*>(mCreator)->_getDelegate()];
 
-    CGFloat contentScale = 1.0;
-#if __IPHONE_4_0
-    if([touchView respondsToSelector:@selector(contentScaleFactor)])
-        contentScale = [[UIScreen mainScreen] scale];
-#endif
+	MultiTouchState newState;
+	newState.X.rel = (location.x - previousLocation.x);
+	newState.Y.rel = (location.y - previousLocation.y);
+	newState.X.abs = location.x;
+	newState.Y.abs = location.y;
+	newState.touchType |= 1 << MT_Moved;
 
-    MultiTouchState newState;
-    newState.X.rel = (location.x - previousLocation.x) * contentScale;
-    newState.Y.rel = (location.y - previousLocation.y) * contentScale;
-    newState.X.abs = location.x * contentScale;
-    newState.Y.abs = location.y * contentScale;
-    newState.touchType |= 1 << MT_Moved;
-
-    if( mListener && mBuffered )
-    {
-        mListener->touchMoved(MultiTouchEvent(this, newState));
-    }
-    else
-    {
-        mStates.push_back(newState);
-    }
+	if(mListener && mBuffered)
+	{
+		mListener->touchMoved(MultiTouchEvent(this, newState));
+	}
+	else
+	{
+		mStates.push_back(newState);
+	}
 }
 
-void iPhoneMultiTouch::_touchCancelled(UITouch *touch)
+void iPhoneMultiTouch::_touchCancelled(UITouch* touch)
 {
-    UIView *touchView = static_cast<iPhoneInputManager*>(mCreator)->_getDelegate();
-    CGPoint location = [touch locationInView:touchView];
+	CGPoint location = [touch locationInView:static_cast<iPhoneInputManager*>(mCreator)->_getDelegate()];
 
-    CGFloat contentScale = 1.0;
-#if __IPHONE_4_0
-    if([touchView respondsToSelector:@selector(contentScaleFactor)])
-        contentScale = [[UIScreen mainScreen] scale];
-#endif
+	MultiTouchState newState;
+	newState.X.abs = location.x;
+	newState.Y.abs = location.y;
+	newState.touchType |= 1 << MT_Cancelled;
 
-    MultiTouchState newState;
-    newState.X.abs = location.x * contentScale;
-    newState.Y.abs = location.y * contentScale;
-    newState.touchType |= 1 << MT_Cancelled;
-
-    if( mListener && mBuffered )
-    {
-        mListener->touchCancelled(MultiTouchEvent(this, newState));
-    }
-    else
-    {
-        mStates.push_back(newState);
-    }
+	if(mListener && mBuffered)
+	{
+		mListener->touchCancelled(MultiTouchEvent(this, newState));
+	}
+	else
+	{
+		mStates.push_back(newState);
+	}
 }
