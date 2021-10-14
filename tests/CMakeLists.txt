@@ -26,6 +26,11 @@ SET(EXECUTABLE_FILES character_controller_test.cpp)
 SET(EXTERNAL_LIBRARIES osgPhysics osgPhysicsUtils ${THIRD_PARTY_LIBRARIES})
 START_EXECUTABLE()
 
+SET(EXECUTABLE_NAME character_animation)
+SET(EXECUTABLE_FILES character_animation_test.cpp)
+SET(EXTERNAL_LIBRARIES osgPhysics osgPhysicsUtils ${THIRD_PARTY_LIBRARIES})
+START_EXECUTABLE()
+
 # Wheeled vehicle control
 SET(EXECUTABLE_NAME physics_vehicle)
 SET(EXECUTABLE_FILES physics_vehicle_test.cpp)
