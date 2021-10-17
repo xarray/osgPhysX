@@ -21,8 +21,10 @@ int main(int argc, char** argv)
     osg::ref_ptr<osg::Geode> root = new osg::Geode;
 
     osg::ref_ptr<osgPhysicsUtils::PlayerAnimation> animManager = new osgPhysicsUtils::PlayerAnimation;
-    if (!animManager->initialize("ruby_skeleton.ozz", "ruby_mesh.ozz")) return 1;
-    if (!animManager->loadAnimation("idle", "ruby_animation.ozz")) return 1;
+    if (!animManager->initialize("exo_gray.skeleton.ozz", "exo_gray.mesh.ozz")) return 1;
+    if (!animManager->loadAnimation("idle", "exo_gray@idle.ozz")) return 1;
+    animManager->select("idle", 1.0f, true);
+    animManager->seek("idle", 0.0f);
 
     viewer.setSceneData(root.get());
     viewer.setCameraManipulator(new osgGA::TrackballManipulator);
@@ -33,7 +35,7 @@ int main(int argc, char** argv)
         viewer.frame();
         if (viewer.getFrameStamp())
         {
-            animManager->update(*viewer.getFrameStamp(), false, true);
+            animManager->update(*viewer.getFrameStamp(), false);
             animManager->applyMeshes(*root, true);
         }
     }

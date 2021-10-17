@@ -7,6 +7,7 @@
 
 #include <ozz/animation/runtime/animation.h>
 #include <ozz/animation/runtime/sampling_job.h>
+#include <ozz/animation/runtime/blending_job.h>
 #include <ozz/animation/runtime/local_to_model_job.h>
 #include <ozz/animation/runtime/skeleton.h>
 #include <ozz/animation/runtime/skeleton_utils.h>
@@ -237,25 +238,27 @@ public:
 
     struct AnimationSampler
     {
-        AnimationSampler() : weight(1.0f) {}
+        AnimationSampler() : weight(0.0f), playbackSpeed(1.0f), timeRatio(-1.0f),
+                             startTime(0.0f), resetTimeRatio(true), looping(false) {}
         ozz::animation::Animation animation;
         ozz::animation::SamplingCache cache;
         ozz::vector<ozz::math::SoaTransform> locals;
-        float weight;
+        float weight, playbackSpeed, timeRatio, startTime;
+        bool resetTimeRatio, looping;
     };
-    std::map<std::string, AnimationSampler> _animations;
-    std::string _currentKey;
 
+    std::map<std::string, AnimationSampler> _animations;
     ozz::animation::Skeleton _skeleton;
+    ozz::vector<ozz::math::SoaTransform> _blended_locals;
     ozz::vector<ozz::math::Float4x4> _models;
     ozz::vector<ozz::math::Float4x4> _skinning_matrices;
     ozz::vector<OzzMesh> _meshes;
 };
 
 PlayerAnimation::PlayerAnimation()
-    : _playbackSpeed(1.0f), _timeRatio(-1.0f), _startTime(0.0f), _resetTimeRatio(true)
 {
     _internal = new OzzAnimation;
+    _blendingThreshold = ozz::animation::BlendingJob().threshold;
 }
 
 bool PlayerAnimation::initialize(const std::string& skeleton, const std::string& mesh)
@@ -264,6 +267,7 @@ bool PlayerAnimation::initialize(const std::string& skeleton, const std::string&
     if (!ozz->loadSkeleton(skeleton.c_str(), &(ozz->_skeleton))) return false;
     if (!ozz->loadMesh(mesh.c_str(), &(ozz->_meshes))) return false;
     ozz->_models.resize(ozz->_skeleton.num_joints());
+    ozz->_blended_locals.resize(ozz->_skeleton.num_soa_joints());
 
     size_t num_skinning_matrices = 0, num_joints = ozz->_skeleton.num_joints();
     for (const OzzMesh& mesh : ozz->_meshes)
@@ -297,7 +301,8 @@ bool PlayerAnimation::loadAnimation(const std::string& key, const std::string& a
 
     sampler.cache.Resize(num_joints);
     sampler.locals.resize(ozz->_skeleton.num_soa_joints());
-    if (ozz->_animations.size() < 2) ozz->_currentKey = key;
+    if (ozz->_animations.size() > 1) sampler.weight = 0.0f;
+    else sampler.weight = 1.0f;  // by default only the first animation is full weighted
     return true;
 }
 
@@ -308,44 +313,65 @@ void PlayerAnimation::unloadAnimation(const std::string& key)
     if (itr != ozz->_animations.end()) ozz->_animations.erase(itr);
 }
 
-bool PlayerAnimation::update(const osg::FrameStamp& fs, bool paused, bool looping)
+bool PlayerAnimation::update(const osg::FrameStamp& fs, bool paused)
 {
     OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
-    OzzAnimation::AnimationSampler& sampler = ozz->_animations[ozz->_currentKey];
-    if (!paused)
+    ozz::vector<ozz::animation::BlendingJob::Layer> layers;
+
+    std::map<std::string, OzzAnimation::AnimationSampler>::iterator itr;
+    for (itr = ozz->_animations.begin(); itr != ozz->_animations.end(); ++itr)
     {
-        // Compute global playing time ratio
-        if (_timeRatio < 0.0f)
+        OzzAnimation::AnimationSampler& sampler = itr->second;
+        if (!paused)
         {
-            _startTime = (float)fs.getSimulationTime();
-            _timeRatio = 0.0f;
+            // Compute global playing time ratio
+            if (sampler.timeRatio < 0.0f)
+            {
+                sampler.startTime = (float)fs.getSimulationTime();
+                sampler.timeRatio = 0.0f;
+            }
+            else if (sampler.resetTimeRatio)
+            {
+                sampler.startTime =
+                    (float)fs.getSimulationTime() -
+                    (sampler.timeRatio * sampler.animation.duration() / sampler.playbackSpeed);
+                sampler.resetTimeRatio = false;
+            }
+            else
+            {
+                sampler.timeRatio = ((float)fs.getSimulationTime() - sampler.startTime)
+                                  * sampler.playbackSpeed / sampler.animation.duration();
+                if (sampler.looping && sampler.timeRatio > 1.0f) sampler.timeRatio = -1.0f;
+            }
         }
-        else if (_resetTimeRatio)
-        {
-            _startTime = (float)fs.getSimulationTime()
-                       - (_timeRatio * sampler.animation.duration() / _playbackSpeed);
-            _resetTimeRatio = false;
-        }
-        else
-        {
-            _timeRatio = ((float)fs.getSimulationTime() - _startTime)
-                       * _playbackSpeed / sampler.animation.duration();
-            if (looping && _timeRatio > 1.0f) _timeRatio = -1.0f;
-        }
+
+        if (sampler.weight <= 0.0f) continue;
+        ozz::animation::BlendingJob::Layer layer;
+        layer.transform = make_span(sampler.locals);
+        layer.weight = sampler.weight;
+        layers.push_back(layer);
+
+        // Sample animation data to its local space
+        ozz::animation::SamplingJob samplingJob;
+        samplingJob.animation = &(sampler.animation);
+        samplingJob.cache = &(sampler.cache);
+        samplingJob.ratio = osg::clampBetween(sampler.timeRatio, 0.0f, 1.0f);
+        samplingJob.output = ozz::make_span(sampler.locals);
+        if (!samplingJob.Run()) return false;
     }
 
-    // Sample animation data to its local space
-    ozz::animation::SamplingJob samplingJob;
-    samplingJob.animation = &(sampler.animation);
-    samplingJob.cache = &(sampler.cache);
-    samplingJob.ratio = getTimeRatio();
-    samplingJob.output = ozz::make_span(sampler.locals);
-    if (!samplingJob.Run()) return false;
+    // Set-up blending job
+    ozz::animation::BlendingJob blendJob;
+    blendJob.threshold = _blendingThreshold;
+    blendJob.layers = ozz::make_span(layers);
+    blendJob.bind_pose = ozz->_skeleton.joint_bind_poses();
+    blendJob.output = ozz::make_span(ozz->_blended_locals);
+    if (!blendJob.Run()) return false;
 
     // Convert sampler data to world space for updating skeleton
     ozz::animation::LocalToModelJob ltmJob;
     ltmJob.skeleton = &(ozz->_skeleton);
-    ltmJob.input = ozz::make_span(sampler.locals);
+    ltmJob.input = ozz::make_span(ozz->_blended_locals);
     ltmJob.output = ozz::make_span(ozz->_models);
     return ltmJob.Run();
 }
@@ -416,21 +442,57 @@ osg::BoundingBox PlayerAnimation::computeSkeletonBounds() const
     return bound;
 }
 
-float PlayerAnimation::getDuration() const
+float PlayerAnimation::getAnimationStartTime(const std::string& key)
 {
     OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
-    OzzAnimation::AnimationSampler& sampler = ozz->_animations[ozz->_currentKey];
+    OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
+    return sampler.startTime;
+}
+
+float PlayerAnimation::getTimeRatio(const std::string& key) const
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
+    return osg::clampBetween(sampler.timeRatio, 0.0f, 1.0f);
+}
+
+float PlayerAnimation::getDuration(const std::string& key) const
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
     return sampler.animation.duration();
 }
 
-void PlayerAnimation::selectAnimation(const std::string& key)
+float PlayerAnimation::getPlaybackSpeed(const std::string& key) const
 {
     OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
-    ozz->_currentKey = key; _timeRatio = -1.0f;  // FIXME: blend?
+    OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
+    return sampler.playbackSpeed;
 }
 
-void PlayerAnimation::seek(float timeRatio)
+void PlayerAnimation::setPlaybackSpeed(const std::string& key, float s)
 {
-    _timeRatio = osg::clampBetween(timeRatio, 0.0f, 1.0f);
-    _resetTimeRatio = true;
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
+    sampler.playbackSpeed = s;
+}
+
+void PlayerAnimation::select(const std::string& key, float weight, bool looping)
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
+    sampler.weight = weight; sampler.looping = looping;
+}
+
+//void PlayerAnimation::selectAdditive(const std::string& key, float weight, bool looping)
+//{
+    // TODO
+//}
+
+void PlayerAnimation::seek(const std::string& key, float timeRatio)
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
+    sampler.timeRatio = osg::clampBetween(timeRatio, 0.0f, 1.0f);
+    sampler.resetTimeRatio = true;
 }

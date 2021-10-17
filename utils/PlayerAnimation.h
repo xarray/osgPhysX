@@ -17,24 +17,24 @@ namespace osgPhysicsUtils
         bool loadAnimation(const std::string& key, const std::string& animation);
         void unloadAnimation(const std::string& key);
 
-        bool update(const osg::FrameStamp& fs, bool paused, bool looping);
+        bool update(const osg::FrameStamp& fs, bool paused);
         bool applyMeshes(osg::Geode& meshDataRoot, bool withSkinning);
 
         osg::BoundingBox computeSkeletonBounds() const;
-        float getAnimationStartTime() const { return _startTime; }
-        float getTimeRatio() const { return osg::clampBetween(_timeRatio, 0.0f, 1.0f); }
-        float getDuration() const;
+        float getAnimationStartTime(const std::string& key);
+        float getTimeRatio(const std::string& key) const;
+        float getDuration(const std::string& key) const;
 
-        float getPlaybackSpeed() const { return _playbackSpeed; }
-        void setPlaybackSpeed(float s) { _playbackSpeed = s; }
+        float getPlaybackSpeed(const std::string& key) const;
+        void setPlaybackSpeed(const std::string& key, float s);
 
-        void selectAnimation(const std::string& key);
-        void seek(float timeRatio);
+        void select(const std::string& key, float weight, bool looping);
+        //void selectAdditive(const std::string& key, float weight, bool looping);
+        void seek(const std::string& key, float timeRatio);
 
     protected:
         osg::ref_ptr<osg::Referenced> _internal;
-        float _playbackSpeed, _timeRatio, _startTime;
-        bool _resetTimeRatio;
+        float _blendingThreshold;
     };
 
 }
