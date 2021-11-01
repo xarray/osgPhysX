@@ -11,6 +11,7 @@ namespace osgPhysicsUtils
     class PlayerAnimation : public osg::Referenced
     {
     public:
+        typedef float (*SetJointWeightFunc)(int, int, void*);
         PlayerAnimation();
 
         bool initialize(const std::string& skeleton, const std::string& mesh);
@@ -19,6 +20,11 @@ namespace osgPhysicsUtils
 
         bool update(const osg::FrameStamp& fs, bool paused);
         bool applyMeshes(osg::Geode& meshDataRoot, bool withSkinning);
+
+        typedef std::pair<int, int> ThisAndParent;
+        std::vector<ThisAndParent> getSkeletonIndices(int from = -1) const;
+        std::string getSkeletonJointName(int joint) const;
+        int getSkeletonJointIndex(const std::string& joint) const;
 
         osg::BoundingBox computeSkeletonBounds() const;
         float getAnimationStartTime(const std::string& key);
@@ -29,7 +35,8 @@ namespace osgPhysicsUtils
         void setPlaybackSpeed(const std::string& key, float s);
 
         void select(const std::string& key, float weight, bool looping);
-        //void selectAdditive(const std::string& key, float weight, bool looping);
+        void selectPartial(const std::string& key, float weight, bool looping,
+                           SetJointWeightFunc func, void* userData);
         void seek(const std::string& key, float timeRatio);
 
     protected:

@@ -243,6 +243,7 @@ public:
         ozz::animation::Animation animation;
         ozz::animation::SamplingCache cache;
         ozz::vector<ozz::math::SoaTransform> locals;
+        ozz::vector<ozz::math::SimdFloat4> jointWeights;
         float weight, playbackSpeed, timeRatio, startTime;
         bool resetTimeRatio, looping;
     };
@@ -349,6 +350,8 @@ bool PlayerAnimation::update(const osg::FrameStamp& fs, bool paused)
         ozz::animation::BlendingJob::Layer layer;
         layer.transform = make_span(sampler.locals);
         layer.weight = sampler.weight;
+        if (!sampler.jointWeights.empty())
+            layer.joint_weights = ozz::make_span(sampler.jointWeights);
         layers.push_back(layer);
 
         // Sample animation data to its local space
@@ -406,6 +409,33 @@ bool PlayerAnimation::applyMeshes(osg::Geode& meshDataRoot, bool withSkinning)
         if (!ozz->applySkinningMesh(*geom, mesh)) return false;
     }
     return true;
+}
+
+std::vector<PlayerAnimation::ThisAndParent> PlayerAnimation::getSkeletonIndices(int from) const
+{
+    struct NameIterator
+    {
+        void operator()(int j, int p) { names.push_back(ThisAndParent(j, p)); }
+        std::vector<ThisAndParent> names;
+    } itr;
+
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    itr = ozz::animation::IterateJointsDF(ozz->_skeleton, itr, from);
+    return itr.names;
+}
+
+std::string PlayerAnimation::getSkeletonJointName(int j) const
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    return (j < ozz->_skeleton.num_joints()) ? ozz->_skeleton.joint_names()[j] : "";
+}
+
+int PlayerAnimation::getSkeletonJointIndex(const std::string& joint) const
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    auto names = ozz->_skeleton.joint_names();
+    for (size_t i = 0; i < ozz->_skeleton.num_joints(); ++i)
+    { if (names[i] == joint) return i; } return -1;
 }
 
 osg::BoundingBox PlayerAnimation::computeSkeletonBounds() const
@@ -482,12 +512,33 @@ void PlayerAnimation::select(const std::string& key, float weight, bool looping)
     OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
     OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
     sampler.weight = weight; sampler.looping = looping;
+    sampler.jointWeights.clear();  // clear specific joint weights
 }
 
-//void PlayerAnimation::selectAdditive(const std::string& key, float weight, bool looping)
-//{
-    // TODO
-//}
+void PlayerAnimation::selectPartial(const std::string& key, float weight, bool looping,
+                                    PlayerAnimation::SetJointWeightFunc func, void* userData)
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    OzzAnimation::AnimationSampler& sampler = ozz->_animations[key];
+    sampler.weight = weight; sampler.looping = looping;
+    sampler.jointWeights.resize(sampler.locals.size());
+
+    struct WeightSetIterator
+    {
+        typedef ozz::vector<ozz::math::SimdFloat4>* JointWeightPtr;
+        JointWeightPtr weights; SetJointWeightFunc traveller; void* userData;
+        WeightSetIterator(JointWeightPtr w, SetJointWeightFunc f, void* p)
+            : weights(w), traveller(f), userData(p) {}
+
+        void operator()(int j, int p)
+        {
+            float v = traveller(j, p, userData);
+            ozz::math::SimdFloat4& soa = weights->at(j / 4);
+            soa = ozz::math::SetI(soa, ozz::math::simd_float4::Load1(v), j % 4);
+        }
+    } itr(&(sampler.jointWeights), func, userData);
+    ozz::animation::IterateJointsDF(ozz->_skeleton, itr, -1);
+}
 
 void PlayerAnimation::seek(const std::string& key, float timeRatio)
 {
