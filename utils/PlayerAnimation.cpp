@@ -9,6 +9,8 @@
 #include <ozz/animation/runtime/sampling_job.h>
 #include <ozz/animation/runtime/blending_job.h>
 #include <ozz/animation/runtime/local_to_model_job.h>
+#include <ozz/animation/runtime/ik_aim_job.h>
+#include <ozz/animation/runtime/ik_two_bone_job.h>
 #include <ozz/animation/runtime/skeleton.h>
 #include <ozz/animation/runtime/skeleton_utils.h>
 #include <ozz/base/log.h>
@@ -20,6 +22,7 @@
 #include <ozz/base/maths/box.h>
 #include <ozz/base/maths/math_ex.h>
 #include <ozz/base/maths/simd_math.h>
+#include <ozz/base/maths/simd_quaternion.h>
 #include <ozz/base/maths/soa_transform.h>
 #include <ozz/base/maths/vec_float.h>
 #include <ozz/base/memory/allocator.h>
@@ -236,6 +239,19 @@ public:
         return true;
     }
 
+    void multiplySoATransformQuaternion(int index, const ozz::math::SimdQuaternion& quat,
+                                        const ozz::span<ozz::math::SoaTransform>& transforms)
+    {
+        // Convert soa to aos in order to perform quaternion multiplication, and get back to soa
+        ozz::math::SoaTransform& soaTransformRef = transforms[index / 4];
+        ozz::math::SimdQuaternion aosQuats[4];
+        ozz::math::Transpose4x4(&soaTransformRef.rotation.x, &aosQuats->xyzw);
+
+        ozz::math::SimdQuaternion& aosQuatsRef = aosQuats[index & 3];
+        aosQuatsRef = aosQuatsRef * quat;
+        ozz::math::Transpose4x4(&aosQuats->xyzw, &soaTransformRef.rotation.x);
+    }
+
     struct AnimationSampler
     {
         AnimationSampler() : weight(0.0f), playbackSpeed(1.0f), timeRatio(-1.0f),
@@ -379,6 +395,93 @@ bool PlayerAnimation::update(const osg::FrameStamp& fs, bool paused)
     return ltmJob.Run();
 }
 
+bool PlayerAnimation::updateAimIK(const osg::Vec3& target, const std::vector<JointIkData>& chain,
+                                  const osg::Vec3& offset, const osg::Vec3& pole)
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    ozz::math::SimdQuaternion correction;
+
+    ozz::animation::IKAimJob aimIK;
+    aimIK.pole_vector = ozz::math::simd_float4::Load(pole[0], pole[1], pole[2], 0.0f);
+    aimIK.target = ozz::math::simd_float4::Load(target[0], target[1], target[2], 0.0f);
+    aimIK.joint_correction = &correction;
+
+    // 1. Rotate forward and offset position based on the result of previous joint IK.
+    // 2. Bring forward and offset back in joint local-space
+    // 3. Aim is iteratively applied up to the last selected joint of the hierarchy
+    for (size_t i = 0; i < chain.size(); ++i)
+    {
+        const JointIkData& ikData = chain[i];
+        const osg::Vec3& up = ikData.localUp, dir = ikData.localForward;
+        if (ikData.joint < 0 || ikData.weight <= 0.0f) return false;
+
+        aimIK.joint = &(ozz->_models[ikData.joint]);
+        aimIK.up = ozz::math::simd_float4::Load(up[0], up[1], up[2], 0.0f);
+        aimIK.weight = ikData.weight;
+        if (i == 0)  // First joint, uses global forward and offset
+        {
+            aimIK.offset = ozz::math::simd_float4::Load(offset[0], offset[1], offset[2], 0.0f);
+            aimIK.forward = ozz::math::simd_float4::Load(dir[0], dir[1], dir[2], 0.0f);
+        }
+        else
+        {
+            const ozz::math::SimdFloat4 correctedForward = ozz::math::TransformVector(
+                ozz->_models[i - 1], ozz::math::TransformVector(correction, aimIK.forward));
+            const ozz::math::SimdFloat4 correctedOffset = ozz::math::TransformPoint(
+                ozz->_models[i - 1], ozz::math::TransformVector(correction, aimIK.offset));
+            const ozz::math::Float4x4 invJoint = ozz::math::Invert(ozz->_models[i]);
+            aimIK.forward = ozz::math::TransformVector(invJoint, correctedForward);
+            aimIK.offset = ozz::math::TransformPoint(invJoint, correctedOffset);
+        }
+
+        // Compute and apply IK quaternion to its respective local-space transforms
+        if (!aimIK.Run()) return false;
+        ozz->multiplySoATransformQuaternion(i, correction, ozz::make_span(ozz->_blended_locals));
+    }
+
+    // Convert IK data to world space for updating skeleton
+    ozz::animation::LocalToModelJob ltmJob;
+    ltmJob.skeleton = &(ozz->_skeleton);
+    ltmJob.from = chain.back().joint;
+    ltmJob.input = ozz::make_span(ozz->_blended_locals);
+    ltmJob.output = ozz::make_span(ozz->_models);
+    return ltmJob.Run();
+}
+
+bool PlayerAnimation::updateTwoBoneIK(const osg::Vec3& target, int start, int mid, int end, bool& reached,
+                                      float weight, float soften, float twist,
+                                      const osg::Vec3& midAxis, const osg::Vec3& pole)
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    ozz::math::SimdQuaternion startCorrection, midCorrection;
+    if (start < 0 || mid < 0 || end < 0) return false;
+
+    ozz::animation::IKTwoBoneJob boneIK;
+    boneIK.target = ozz::math::simd_float4::Load(target[0], target[1], target[2], 0.0f);
+    boneIK.pole_vector = ozz::math::simd_float4::Load(pole[0], pole[1], pole[2], 0.0f);
+    boneIK.mid_axis = ozz::math::simd_float4::Load(midAxis[0], midAxis[1], midAxis[2], 0.0f);
+    boneIK.twist_angle = twist; boneIK.weight = weight; boneIK.soften = soften;
+    boneIK.start_joint = &ozz->_models[start];
+    boneIK.mid_joint = &ozz->_models[mid];
+    boneIK.end_joint = &ozz->_models[end];
+    boneIK.start_joint_correction = &startCorrection;
+    boneIK.mid_joint_correction = &midCorrection;
+    boneIK.reached = &reached;
+
+    // Apply IK quaternions to their respective local-space transforms
+    if (!boneIK.Run()) return false;
+    ozz->multiplySoATransformQuaternion(start, startCorrection, ozz::make_span(ozz->_blended_locals));
+    ozz->multiplySoATransformQuaternion(mid, midCorrection, ozz::make_span(ozz->_blended_locals));
+
+    // Convert IK data to world space for updating skeleton
+    ozz::animation::LocalToModelJob ltmJob;
+    ltmJob.skeleton = &(ozz->_skeleton);
+    ltmJob.from = start; //ltmJob.to = end;
+    ltmJob.input = ozz::make_span(ozz->_blended_locals);
+    ltmJob.output = ozz::make_span(ozz->_models);
+    return ltmJob.Run();
+}
+
 bool PlayerAnimation::applyMeshes(osg::Geode& meshDataRoot, bool withSkinning)
 {
     OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
@@ -436,6 +539,29 @@ int PlayerAnimation::getSkeletonJointIndex(const std::string& joint) const
     auto names = ozz->_skeleton.joint_names();
     for (size_t i = 0; i < ozz->_skeleton.num_joints(); ++i)
     { if (names[i] == joint) return i; } return -1;
+}
+
+void PlayerAnimation::setModelSpaceJointMatrix(int joint, const osg::Matrix& matrix)
+{
+    ozz::math::Float4x4 m;
+    for (int i = 0; i < 4; ++i)
+    {
+        m.cols[i] = ozz::math::simd_float4::Load(
+            matrix(i, 0), matrix(i, 1), matrix(i, 2), matrix(i, 3));
+    }
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    ozz->_models[joint] = m;
+}
+
+osg::Matrix PlayerAnimation::getModelSpaceJointMatrix(int joint) const
+{
+    OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
+    const ozz::math::Float4x4& m = ozz->_models[joint];
+    return osg::Matrix(
+        ozz::math::GetX(m.cols[0]), ozz::math::GetY(m.cols[0]), ozz::math::GetZ(m.cols[0]), ozz::math::GetW(m.cols[0]),
+        ozz::math::GetX(m.cols[1]), ozz::math::GetY(m.cols[1]), ozz::math::GetZ(m.cols[1]), ozz::math::GetW(m.cols[1]),
+        ozz::math::GetX(m.cols[2]), ozz::math::GetY(m.cols[2]), ozz::math::GetZ(m.cols[2]), ozz::math::GetW(m.cols[2]),
+        ozz::math::GetX(m.cols[3]), ozz::math::GetY(m.cols[3]), ozz::math::GetZ(m.cols[3]), ozz::math::GetW(m.cols[3]));
 }
 
 osg::BoundingBox PlayerAnimation::computeSkeletonBounds() const

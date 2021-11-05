@@ -21,10 +21,20 @@ namespace osgPhysicsUtils
         bool update(const osg::FrameStamp& fs, bool paused);
         bool applyMeshes(osg::Geode& meshDataRoot, bool withSkinning);
 
+        struct JointIkData { int joint; float weight; osg::Vec3 localUp; osg::Vec3 localForward; };
+        bool updateAimIK(const osg::Vec3& target, const std::vector<JointIkData>& chain,
+                         const osg::Vec3& aimOffset = osg::Vec3(), const osg::Vec3& pole = osg::Y_AXIS);
+        bool updateTwoBoneIK(const osg::Vec3& target, int start, int mid, int end, bool& reached,
+                             float weight = 1.0f, float soften = 1.0f, float twist = 0.0f,
+                             const osg::Vec3& midAxis = osg::Z_AXIS, const osg::Vec3& pole = osg::Y_AXIS);
+
         typedef std::pair<int, int> ThisAndParent;
         std::vector<ThisAndParent> getSkeletonIndices(int from = -1) const;
         std::string getSkeletonJointName(int joint) const;
         int getSkeletonJointIndex(const std::string& joint) const;
+
+        void setModelSpaceJointMatrix(int joint, const osg::Matrix& m);
+        osg::Matrix getModelSpaceJointMatrix(int joint) const;
 
         osg::BoundingBox computeSkeletonBounds() const;
         float getAnimationStartTime(const std::string& key);
