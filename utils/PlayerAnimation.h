@@ -2,6 +2,7 @@
 #define CORE_PLAYERANIMATION
 
 #include <osg/Version>
+#include <osg/Texture2D>
 #include <osg/Geometry>
 
 namespace osgPhysicsUtils
@@ -50,6 +51,8 @@ namespace osgPhysicsUtils
         void seek(const std::string& key, float timeRatio);
 
     protected:
+        struct TextureData { std::map<std::string, std::string> channels; };
+        std::vector<TextureData> _meshTextureList;
         osg::ref_ptr<osg::Referenced> _internal;
         float _blendingThreshold;
     };

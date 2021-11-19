@@ -3,6 +3,7 @@
 #include <osg/Notify>
 #include <osg/Geometry>
 #include <osg/Geode>
+#include <osgDB/ReadFile>
 #include <osgUtil/SmoothingVisitor>
 
 #include <ozz/animation/runtime/animation.h>
@@ -28,9 +29,29 @@
 #include <ozz/base/memory/allocator.h>
 #include <ozz/geometry/runtime/skinning_job.h>
 #include <ozz/mesh.h>
+#include <fstream>
 
 using namespace osgPhysicsUtils;
 typedef ozz::sample::Mesh OzzMesh;
+
+static std::string& trim(std::string& s)
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !isspace(ch); }));
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+            [](unsigned char ch) { return !isspace(ch); }).base(), s.end());
+    return s;
+}
+
+static osg::Texture2D* createTexture(const std::string& fileName)
+{
+    osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D;
+    tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+    tex->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP);
+    tex->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP);
+    tex->setImage(osgDB::readImageFile(fileName));
+    return tex.release();
+}
 
 class OzzAnimation : public osg::Referenced
 {
@@ -286,6 +307,21 @@ bool PlayerAnimation::initialize(const std::string& skeleton, const std::string&
     ozz->_models.resize(ozz->_skeleton.num_joints());
     ozz->_blended_locals.resize(ozz->_skeleton.num_soa_joints());
 
+    std::ifstream mtlIn(mesh + ".mat");
+    _meshTextureList.resize(ozz->_meshes.size());
+    if (mtlIn)
+    {
+        std::string line, meshID, channelName, fileName;
+        while (std::getline(mtlIn, line))
+        {
+            std::stringstream ss; ss << line;
+            std::getline(ss, meshID, ','); int id = atoi(meshID.c_str());
+            std::getline(ss, channelName, ','); std::getline(ss, fileName);
+            _meshTextureList[id].channels[trim(channelName)] = trim(fileName);
+        }
+        mtlIn.close();
+    }
+
     size_t num_skinning_matrices = 0, num_joints = ozz->_skeleton.num_joints();
     for (const OzzMesh& mesh : ozz->_meshes)
         num_skinning_matrices = ozz::math::Max(num_skinning_matrices, mesh.joint_remaps.size());
@@ -487,12 +523,26 @@ bool PlayerAnimation::applyMeshes(osg::Geode& meshDataRoot, bool withSkinning)
     OzzAnimation* ozz = static_cast<OzzAnimation*>(_internal.get());
     if (meshDataRoot.getNumDrawables() != ozz->_meshes.size())
     {
+        std::map<std::string, osg::ref_ptr<osg::Texture2D>> textures;
         meshDataRoot.removeChildren(0, meshDataRoot.getNumDrawables());
         for (unsigned int i = 0; i < ozz->_meshes.size(); ++i)
         {
             osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
             geom->setUseDisplayList(false);
             geom->setUseVertexBufferObjects(true);
+
+            TextureData& td = _meshTextureList[i];
+            for (std::map<std::string, std::string>::iterator it = td.channels.begin();
+                 it != td.channels.end(); ++it)
+            {
+                osg::Texture2D* tex = textures[it->second];
+                if (it->first == "DiffuseColor")
+                {
+                    if (!tex) { tex = createTexture(it->second); textures[it->second] = tex; }
+                    geom->getOrCreateStateSet()->setTextureAttributeAndModes(0, tex);
+                }
+                else {}  // TODO: implement other channels
+            }
             meshDataRoot.addDrawable(geom.get());
         }
     }
