@@ -182,6 +182,7 @@ osg::Group* createCar(osgPhysicsUtils::InputManager* manager, osgPhysics::Update
     return car.release();
 }
 
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
 osgParticle::ParticleSystem* createParticleSystem(osg::Group* parent)
 {
     // Set up the particle appearance
@@ -241,6 +242,7 @@ osgParticle::ParticleSystem* createParticleSystem(osg::Group* parent)
     parent->addChild(geode.get());
     return ps.get();
 }
+#endif
 
 int main(int argc, char** argv)
 {
@@ -289,9 +291,11 @@ int main(int argc, char** argv)
     osg::ref_ptr<osg::MatrixTransform> particleGroup = new osg::MatrixTransform;
     particleGroup->setMatrix(osg::Matrix::translate(initialPosition + osg::Z_AXIS * 5.0f));
 
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
     osgParticle::ParticleSystem* ps = createParticleSystem(particleGroup.get());
     osg::ref_ptr<osgParticle::ParticleSystemUpdater> particleUpdater = new osgParticle::ParticleSystemUpdater;
     particleUpdater->addParticleSystem(ps);
+#endif
 
     // Build the scene graph
     osg::ref_ptr<osg::Group> root = new osg::Group;
@@ -299,7 +303,9 @@ int main(int argc, char** argv)
     root->addChild(terrain.get());
     root->addChild(vehicle.get());
     root->addChild(ball.get());
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
     root->addChild(particleUpdater.get());
+#endif
     root->addChild(particleGroup.get());
 
     // Start the viewer

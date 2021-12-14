@@ -5,9 +5,10 @@
 #include <PxPhysicsAPI.h>
 #include <extensions/PxExtensionsAPI.h>
 #include <vector>
+#include <string>
 #include <map>
 
-#if PX_PHYSICS_VERSION_MAJOR==3 && PX_PHYSICS_VERSION_MINOR==4
+#if PX_PHYSICS_VERSION_MAJOR==3 && PX_PHYSICS_VERSION_MINOR==4 || PX_PHYSICS_VERSION_MAJOR > 3
     //
 #else
 #   error "Unsupport PhysX version"
@@ -43,7 +44,9 @@ namespace osgPhysics
         /** Add actor object to specified scene */
         bool addActor(const std::string& scene, physx::PxActor* actor);
         bool addActor(const std::string& scene, physx::PxRigidActor* actor, const physx::PxFilterData& filter);
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
         bool addActor(const std::string& scene, physx::PxParticleBase* ps, const physx::PxFilterData& filter);
+#endif
         bool removeActor(const std::string& scene, physx::PxActor* actor);
 
         typedef std::vector<physx::PxActor*> ActorList;

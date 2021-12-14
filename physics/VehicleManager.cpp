@@ -171,6 +171,7 @@ bool VehicleManager::addActor(const std::string& scene, PxActor* actor,
     }
     else if (actor)
     {
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
         PxParticleBase* particleBase = actor->is<PxParticleBase>();
         if (particleBase)
         {
@@ -179,6 +180,7 @@ bool VehicleManager::addActor(const std::string& scene, PxActor* actor,
             filter.word1 = COLLISION_FLAG_OBSTACLE_AGAINST;
             particleBase->setSimulationFilterData(filter);
         }
+#endif
     }
     return osgPhysics::Engine::instance()->addActor(scene, actor);
 }

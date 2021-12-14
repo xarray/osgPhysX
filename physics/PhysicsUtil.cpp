@@ -224,7 +224,9 @@ namespace osgPhysics
         heightFieldDesc.nbColumns = numColumns;
         heightFieldDesc.nbRows = numRows;
         heightFieldDesc.format = PxHeightFieldFormat::eS16_TM;
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
         heightFieldDesc.thickness = thickness;
+#endif
 
         PxHeightFieldSample* samplesData = (PxHeightFieldSample*)malloc(
             sizeof(PxHeightFieldSample) * numColumns * numRows);
@@ -322,6 +324,7 @@ namespace osgPhysics
         return createTriangleMesh(verts, indices);
     }
 
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
     PxClothFabric* createClothFabric(const std::vector<PxVec3>& verts, const std::vector<PxU32>& indices,
         const osg::Vec3& gravity)
     {
@@ -336,7 +339,7 @@ namespace osgPhysics
         PxVec3 g(gravity[0], gravity[1], gravity[2]);
         return PxClothFabricCreate(*SDK_OBJ, meshDesc, g);
     }
-
+#endif
     PxScene* createScene(const osg::Vec3& gravity, const PxSimulationFilterShader& filter,
         physx::PxSceneFlags flags, unsigned int numThreads, bool useGPU)
     {
@@ -348,10 +351,19 @@ namespace osgPhysics
         if (useGPU)
         {
             PxCudaContextManager* cudaManager = Engine::instance()->getOrCreateCudaContextManager();
+#if (PX_PHYSICS_VERSION_MAJOR > 3)
+            if (cudaManager) sceneDesc.cudaContextManager = cudaManager;
+#else
             if (cudaManager) sceneDesc.gpuDispatcher = cudaManager->getGpuDispatcher();
+#endif
+
         }
 
+#if (PX_PHYSICS_VERSION_MAJOR > 3)
+        if (!sceneDesc.cudaContextManager && !sceneDesc.cpuDispatcher)
+#else
         if (!sceneDesc.gpuDispatcher && !sceneDesc.cpuDispatcher)
+#endif
         {
             PxDefaultCpuDispatcher* defCpuDispatcher = PxDefaultCpuDispatcherCreate(numThreads);
             if (!defCpuDispatcher)
