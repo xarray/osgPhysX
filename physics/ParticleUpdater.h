@@ -11,6 +11,7 @@
 #include <osg/Referenced>
 #include "Engine.h"
 
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
 namespace osgPhysics
 {
 
@@ -187,5 +188,5 @@ namespace osgPhysics
 #endif
 
 }
-
+#endif
 #endif

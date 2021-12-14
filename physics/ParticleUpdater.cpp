@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
 #include <intrin.h>
 #pragma intrinsic(_BitScanForward)
 #pragma intrinsic(_BitScanReverse)
@@ -420,5 +421,5 @@ void NativeParticleOperator::operateParticles(osgParticle::ParticleSystem* ps, d
         // FIXME: are unhandled particles all dead?
     }
 }
-
+#endif
 #endif

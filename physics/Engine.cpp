@@ -29,7 +29,12 @@ Engine* Engine::instance()
 Engine::Engine()
     : _cooking(NULL), _cudaManager(NULL), _pvdTransport(NULL), _pvd(NULL)
 {
+#if (PX_PHYSICS_VERSION_MAJOR > 3)
+    PxFoundation* foundation = PxCreateFoundation(PX_PHYSICS_VERSION, defaultAllocator, errorHandler);
+#else
     PxFoundation* foundation = PxCreateFoundation(PX_FOUNDATION_VERSION, defaultAllocator, errorHandler);
+#endif
+    
     if (!foundation)
     {
         OSG_WARN << "Unable to initialize PhysX foundation." << std::endl;
@@ -127,6 +132,7 @@ bool Engine::addActor(const std::string& s, PxRigidActor* actor, const PxFilterD
         return false;
 }
 
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
 bool Engine::addActor(const std::string& s, physx::PxParticleBase* ps, const physx::PxFilterData& filter)
 {
     if (addActor(s, ps))
@@ -137,6 +143,7 @@ bool Engine::addActor(const std::string& s, physx::PxParticleBase* ps, const phy
     else
         return false;
 }
+#endif
 
 bool Engine::removeActor(const std::string& s, PxActor* actor)
 {

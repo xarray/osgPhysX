@@ -25,12 +25,20 @@ namespace osgPhysics
     /** Cook and create new convex mesh */
     extern physx::PxConvexMesh* createConvexMesh(
         const std::vector<physx::PxVec3>& verts,
-        physx::PxConvexFlags flags = physx::PxConvexFlag::eCOMPUTE_CONVEX | physx::PxConvexFlag::eINFLATE_CONVEX);
+        physx::PxConvexFlags flags = physx::PxConvexFlag::eCOMPUTE_CONVEX
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
+        | physx::PxConvexFlag::eINFLATE_CONVEX
+#endif
+    );
 
     /** Cook and create new convex mesh from node */
     extern physx::PxConvexMesh* createConvexMesh(
         osg::Node& node,
-        physx::PxConvexFlags flags = physx::PxConvexFlag::eCOMPUTE_CONVEX | physx::PxConvexFlag::eINFLATE_CONVEX);
+        physx::PxConvexFlags flags = physx::PxConvexFlag::eCOMPUTE_CONVEX
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
+        | physx::PxConvexFlag::eINFLATE_CONVEX
+#endif
+    );
 
     /** Cook and create new height field, where lowerTriangleData & upperTriangleData contain material index data
         and hole flag of the lower/upper triangle of each height field cell
@@ -53,9 +61,11 @@ namespace osgPhysics
     extern physx::PxTriangleMesh* createTriangleMesh(osg::Node& node);
 
     /** Cook and create new physics cloth fabric */
+#if !(PX_PHYSICS_VERSION_MAJOR > 3)
     extern physx::PxClothFabric* createClothFabric(const std::vector<physx::PxVec3>& verts,
         const std::vector<physx::PxU32>& indices,
         const osg::Vec3& gravity);
+#endif
 
     /** Create a physics scene */
     extern physx::PxScene* createScene(const osg::Vec3& gravity,
