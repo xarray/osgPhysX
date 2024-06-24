@@ -262,7 +262,14 @@ physx::PxRigidDynamic* WheeledVehicle::createActorAndFilters(
     PxMaterial* defMaterial = VehicleManager::instance()->getSurfaceMaterial(VehicleManager::SURFACE_TARMAC);
     for (int i = 0; i < numWheels; ++i)
     {
+
+#if (PX_PHYSICS_VERSION_MAJOR > 3)
+        _wheelShapes[i] = PxRigidActorExt::createExclusiveShape(*actor, *(wheelGeometries[i]), wheelMtl ? *wheelMtl : *defMaterial);
+        actor->attachShape(*_wheelShapes[i]);
+#else
         _wheelShapes[i] = actor->createShape(*(wheelGeometries[i]), wheelMtl ? *wheelMtl : *defMaterial);
+#endif
+        
         _wheelShapes[i]->setLocalPose(PxTransform(PxIdentity));
 
         // Create a query filter data for the car to ensure that cars do not attempt to drive on themselves
@@ -271,7 +278,12 @@ physx::PxRigidDynamic* WheeledVehicle::createActorAndFilters(
     }
 
     // Must first create wheels and then chassis because PhysX will treat the first shape as the wheel
+#if (PX_PHYSICS_VERSION_MAJOR > 3)
+    _chassisShape = PxRigidActorExt::createExclusiveShape(*actor, PxConvexMeshGeometry(chassis.mesh), chassisMtl ? *chassisMtl : *defMaterial);
+    actor->attachShape(*_chassisShape);
+#else
     _chassisShape = actor->createShape(PxConvexMeshGeometry(chassis.mesh), chassisMtl ? *chassisMtl : *defMaterial);
+#endif
     _chassisShape->setLocalPose(PxTransform(PxIdentity));
     VehicleManager::createFilter(VehicleManager::FILTER_UNDRIVABLE_SURFACE, _chassisShape);
     VehicleManager::createFilter(VehicleManager::FILTER_CHASSIS, _chassisShape);
